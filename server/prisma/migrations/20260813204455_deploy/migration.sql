@@ -1,0 +1,11 @@
+-- Compatibility no-op for the historical 20260813204455_deploy migration.
+--
+-- The original migration attempted destructive camelCase renames on populated
+-- databases. The current schema intentionally uses snake_case database columns
+-- with Prisma @map(...). Existing databases are repaired by
+-- 20260815000100_repair_deploy_schema, and new databases should simply keep
+-- the schema produced by the migrations that precede this one.
+--
+-- Keeping this migration ID preserves migration history for installations that
+-- already recorded it as failed, while making future deployments safe.
+SELECT 1;

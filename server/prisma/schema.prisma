@@ -1,0 +1,562 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+}
+
+model User {
+  id           String @id @default(uuid()) @db.Uuid
+  email        String @unique
+  username     String @unique
+  passwordHash String @map("password_hash")
+
+  firstName String  @map("first_name")
+  lastName  String  @map("last_name")
+  phone     String? @unique
+  avatar    String?
+  bannerUrl String? @map("banner_url")
+  bio       String?
+
+  status UserStatus @default(ACTIVE)
+
+  roleId String @map("role_id") @db.Uuid
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sessions               UserSession[]
+  rooms                  RoomMember[]
+  createdRooms           Room[]                  @relation("RoomCreatedBy")
+  messages               Message[]
+  notifications          Notification[]
+  subscriptions          Subscription[]
+  paymentRequests        PaymentRequest[]
+  contacts               Contact[]               @relation("UserContacts")
+  contactOf              Contact[]               @relation("ContactOf")
+  communityMembers       CommunityMember[]
+  communityAnnouncements CommunityAnnouncement[]
+  communities            Community[]
+
+  @@index([roleId])
+  @@index([status])
+  @@map("users")
+}
+
+model Role {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  description String?
+
+  users       User[]
+  permissions RolePermission[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  description String?
+
+  roles RolePermission[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserSession {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  refreshTokenHash String    @map("refresh_token_hash")
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+enum RoomType {
+  DIRECT
+  GROUP
+}
+
+model Room {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  avatar      String?
+  bannerUrl   String? @map("banner_url")
+
+  type      RoomType @default(DIRECT)
+  isPrivate Boolean  @default(false) @map("is_private")
+
+  createdById String @map("created_by_id") @db.Uuid
+  createdBy   User   @relation("RoomCreatedBy", fields: [createdById], references: [id])
+
+  members  RoomMember[]
+  messages Message[]
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  communityGroups CommunityGroup[]
+
+  @@index([createdById])
+  @@index([isPrivate])
+  @@index([type])
+  @@map("rooms")
+}
+
+model RoomMember {
+  roomId String @map("room_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  @@id([roomId, userId])
+  @@index([userId])
+  @@map("room_members")
+}
+
+model Message {
+  id          String   @id @default(uuid()) @db.Uuid
+  roomId      String   @map("room_id") @db.Uuid
+  senderId    String   @map("sender_id") @db.Uuid
+  content     String
+  messageType String   @default("text") @map("message_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  room   Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title   String
+  message String
+  type    String @default("general")
+
+  isRead Boolean @default(false) @map("is_read")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+enum SubscriptionAccessLevel {
+  FULL
+  READONLY
+  LOCKED
+}
+
+model SubscriptionPlan {
+  id           String                  @id @default(uuid()) @db.Uuid
+  name         String
+  description  String?
+  price        Decimal                 @db.Decimal(10, 2)
+  durationDays Int
+  accessLevel  SubscriptionAccessLevel @default(FULL)
+  isActive     Boolean                 @default(true)
+
+  // Configurable feature limits (section 10). Null = unlimited.
+  maxGroups          Int? @map("max_groups")
+  maxMembersPerGroup Int? @map("max_members_per_group")
+  maxCommunities     Int? @map("max_communities")
+  maxGuestsPerGroup  Int? @map("max_guests_per_group")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions   Subscription[]
+  paymentRequests PaymentRequest[]
+
+  // Plan names are expected to be unique. Keep this constraint in the database
+  // for future use of upsert({ where: { name } }).
+  @@unique([name])
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  planId String @db.Uuid
+
+  accessLevel SubscriptionAccessLevel
+  startsAt    DateTime
+  expiresAt   DateTime
+  isActive    Boolean                 @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([planId])
+  @@index([expiresAt])
+  @@map("subscriptions")
+}
+
+enum PaymentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PaymentMethod {
+  id            String  @id @default(uuid()) @db.Uuid
+  name          String
+  type          String  @default("UPI")
+  description   String?
+  qrCodeUrl     String?
+  paymentNumber String?
+  upiId         String?
+  isDefault     Boolean @default(false)
+  isActive      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  paymentRequests PaymentRequest[]
+
+  @@map("payment_methods")
+}
+
+model PaymentRequest {
+  id              String @id @default(uuid()) @db.Uuid
+  userId          String @db.Uuid
+  planId          String @db.Uuid
+  paymentMethodId String @db.Uuid
+
+  transactionId String
+  screenshotUrl String?
+
+  amount Decimal              @db.Decimal(10, 2)
+  status PaymentRequestStatus @default(PENDING)
+
+  reviewedById    String?   @db.Uuid
+  reviewedAt      DateTime?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan          SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  paymentMethod PaymentMethod    @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([planId])
+  @@index([paymentMethodId])
+  @@index([status])
+  @@index([transactionId])
+  @@map("payment_requests")
+}
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  actorId String? @db.Uuid
+
+  action   String
+  entity   String
+  entityId String?
+
+  oldValue Json?
+  newValue Json?
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model SiteSetting {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+model UserSessionRevocation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  revokedAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("user_session_revocations")
+}
+
+model RoomUserSetting {
+  id        String   @id @default(uuid()) @db.Uuid
+  roomId    String   @db.Uuid
+  userId    String   @db.Uuid
+  isPinned  Boolean  @default(false)
+  isMuted   Boolean  @default(false)
+  unread    Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@index([roomId])
+  @@map("room_user_settings")
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @db.Uuid
+  userId    String   @db.Uuid
+  reaction  String
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId, reaction])
+  @@index([messageId])
+  @@index([userId])
+  @@map("message_reactions")
+}
+
+model MessageUserState {
+  id          String    @id @default(uuid()) @db.Uuid
+  messageId   String    @db.Uuid
+  userId      String    @db.Uuid
+  deleted     Boolean   @default(false)
+  readAt      DateTime?
+  deliveredAt DateTime?
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@index([messageId])
+  @@map("message_user_states")
+}
+
+model MediaAsset {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  originalName String
+  storedName   String
+  path         String
+  mimeType     String
+  size         Int
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("media_assets")
+}
+
+// Extended social/guest features. These tables are intentionally simple and
+// are also exposed through the raw SQL feature services so the app can be
+// migrated safely before regenerating Prisma Client.
+model Contact {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  contactId String   @map("contact_id") @db.Uuid
+  nickname  String?
+  blocked   Boolean  @default(false)
+  favorite  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User @relation("UserContacts", fields: [userId], references: [id], onDelete: Cascade)
+  contact User @relation("ContactOf", fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contactId])
+  @@index([userId])
+  @@index([contactId])
+  @@map("contacts")
+}
+
+model ContactRequest {
+  id         String   @id @default(uuid()) @db.Uuid
+  senderId   String   @map("sender_id") @db.Uuid
+  receiverId String   @map("receiver_id") @db.Uuid
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@map("contact_requests")
+}
+
+model Status {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  content   String
+  mediaUrl  String?  @map("media_url")
+  mediaType String?  @map("media_type")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("statuses")
+}
+
+model StatusView {
+  id       String   @id @default(uuid()) @db.Uuid
+  statusId String   @map("status_id") @db.Uuid
+  viewerId String   @map("viewer_id") @db.Uuid
+  viewedAt DateTime @default(now()) @map("viewed_at")
+
+  @@unique([statusId, viewerId])
+  @@index([viewerId])
+  @@map("status_views")
+}
+
+model Community {
+  id               String                  @id @default(uuid()) @db.Uuid
+  name             String
+  description      String?
+  ownerId          String                  @map("owner_id") @db.Uuid
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+  communityMembers CommunityMember[]
+  communityGroups  CommunityGroup[]
+  owner            User                    @relation(fields: [ownerId], references: [id])
+  announcements    CommunityAnnouncement[]
+
+  @@index([ownerId])
+  @@map("communities")
+}
+
+model CommunityAnnouncement {
+  id          String @id @default(uuid()) @db.Uuid
+  communityId String @map("community_id") @db.Uuid
+  authorId    String @map("author_id") @db.Uuid
+
+  title   String
+  content String
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([communityId])
+  @@index([authorId])
+  @@index([communityId, createdAt])
+  @@map("community_announcements")
+}
+
+model CommunityMember {
+  id          String   @id @default(uuid()) @db.Uuid
+  communityId String   @map("community_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  role        String   @default("MEMBER")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+  @@index([userId])
+  @@map("community_members")
+}
+
+model CommunityGroup {
+  id          String   @id @default(uuid()) @db.Uuid
+  communityId String   @map("community_id") @db.Uuid
+  roomId      String   @map("room_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, roomId])
+  @@map("community_groups")
+}
+
+model GroupInvite {
+  id          String    @id @default(uuid()) @db.Uuid
+  roomId      String    @map("room_id") @db.Uuid
+  token       String    @unique
+  createdById String    @map("created_by_id") @db.Uuid
+  isActive    Boolean   @default(true) @map("is_active")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([roomId])
+  @@map("group_invites")
+}
+
+model GuestSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roomId    String   @map("room_id") @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([roomId])
+  @@index([expiresAt])
+  @@map("guest_sessions")
+}

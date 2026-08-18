@@ -1,0 +1,40 @@
+FedChat Final Functional Update
+
+Implemented in this package:
+
+1. Chat history and navigation
+- Opening any conversation loads the complete message history from PostgreSQL.
+- Current and previous messages remain available after refresh/re-login.
+- Direct chats, group chats, and attached community groups use the same chat window.
+- Contacts now have a Chat button that creates/resumes the direct room and opens it.
+- Groups now have an Open chat action.
+- Community-attached groups now have an Open chat action.
+
+2. Message state / database bug fixes
+- Fixed the message history loader querying the nonexistent message_id column.
+- message_user_states is read using its actual quoted physical columns: messageId, deliveredAt, readAt.
+- Added a schema repair migration for the historical deploy migration that introduced camelCase physical columns in social/guest tables while the raw services expected snake_case.
+- Added db:deploy / db:generate package scripts and a legacy preflight guard.
+
+3. Unread counts
+- New incoming messages increment persistent per-user room unread counts.
+- Opening a chat resets its unread count on the server.
+- Chat list receives unread counts from the database, so counts survive refresh.
+
+4. Contacts and groups
+- Contacts API now exposes canonical user_id alongside contact_id.
+- Group member add flow uses the actual user ID instead of the contact row ID.
+- Contact request API validates the target user exists.
+- Contact request and acceptance notifications are persisted and emitted in realtime.
+
+5. Chat / realtime
+- Existing text, media, voice notes, edits, deletes, reactions, typing, delivered and read events remain connected.
+- Group and community-group messages use the same realtime message pipeline.
+
+6. Deployment repair
+- prisma/migrations/20260815000100_repair_deploy_schema/migration.sql is idempotent and data-preserving.
+- README-FEDCHAT-UPDATED.md contains fresh-deploy and legacy-database deployment instructions.
+
+- Public guest link hardening: guest role is repaired in migration and join route ensures the role exists; guest send permissions removed.
+- Added UPI-first payment method management with admin default-method controls and billing QR presentation.
+- Added responsive billing/admin styles and mobile layout refinements.
