@@ -32,8 +32,8 @@ export const subscriptionService = {
     return subscriptionRepository.createPlan(data);
   },
 
-  async getPlans() {
-    return subscriptionRepository.findAllPlans();
+  async getPlans(options?: { includeInactive?: boolean }) {
+    return subscriptionRepository.findAllPlans(options);
   },
 
   async getPlan(id: string) {

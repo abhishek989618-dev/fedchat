@@ -5,6 +5,7 @@ import type {
 } from "express";
 
 import { adminService } from "./admin.service.js";
+import { createPlanSchema, updatePlanSchema } from "../subscriptions/subscription.validation.js";
 
 import { io } from "../../socket/socket.server.js";
 
@@ -13,18 +14,22 @@ import { io } from "../../socket/socket.server.js";
 // =====================================================
 
 export async function getUsers(
-  _req: Request,
+  req: Request,
   res: Response
 ) {
   try {
-    const users =
-      await adminService.getUsers();
+    const rawPage = Number.parseInt(String(req.query.page ?? "1"), 10);
+    const rawPageSize = Number.parseInt(String(req.query.pageSize ?? "10"), 10);
+    const page = Number.isFinite(rawPage) ? Math.max(1, rawPage) : 1;
+    const pageSize = Number.isFinite(rawPageSize)
+      ? Math.min(100, Math.max(5, rawPageSize))
+      : 10;
+
+    const result = await adminService.getUsers({ page, pageSize });
 
     return res.status(200).json({
       success: true,
-      data: {
-        users,
-      },
+      data: result,
     });
   } catch (error) {
     console.error(error);
@@ -157,6 +162,71 @@ export async function forceLogoutUser(
         error instanceof Error
           ? error.message
           : "Failed to force logout user",
+    });
+  }
+}
+
+// =====================================================
+// PLAN MANAGEMENT
+// =====================================================
+
+export async function getPlans(
+  _req: Request,
+  res: Response
+) {
+  try {
+    const plans = await adminService.getPlansForAdmin();
+    return res.status(200).json({
+      success: true,
+      data: { plans },
+    });
+  } catch (error) {
+    console.error("Admin get plans error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to fetch plans",
+    });
+  }
+}
+
+export async function createAdminPlan(
+  req: Request,
+  res: Response
+) {
+  try {
+    const input = createPlanSchema.parse(req.body);
+    const plan = await adminService.createPlan(input);
+    return res.status(201).json({
+      success: true,
+      message: "Subscription plan created successfully",
+      data: { plan },
+    });
+  } catch (error) {
+    console.error("Admin create plan error:", error);
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to create plan",
+    });
+  }
+}
+
+export async function updateAdminPlan(
+  req: Request<{ id: string }>,
+  res: Response
+) {
+  try {
+    const input = updatePlanSchema.parse(req.body);
+    const plan = await adminService.updatePlan(req.params.id, input);
+    return res.status(200).json({
+      success: true,
+      message: "Subscription plan updated successfully",
+      data: { plan },
+    });
+  } catch (error) {
+    console.error("Admin update plan error:", error);
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to update plan",
     });
   }
 }

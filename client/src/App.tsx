@@ -13,7 +13,7 @@ import { SupportModule } from './modules/support/SupportModule'
 import { StatusModule } from './modules/status/StatusModule'
 import { SubscriptionsModule } from './modules/subscriptions/SubscriptionsModule'
 import { AuthModule } from './modules/auth/AuthModule'
-import type { Section } from './types/app'
+import type { AdminSection, Section } from './types/app'
 import { clearSession, createSocket, getSession } from './lib'
 import type { Socket } from 'socket.io-client'
 import { useApplySiteSettings, useSiteSettings } from './hooks/useSiteSettings'
@@ -29,6 +29,7 @@ function App() {
   useApplySiteSettings(siteSettings)
   const [session, setSession] = useState(getSession())
   const [active, setActive] = useState<Section>('chats')
+  const [adminSection, setAdminSection] = useState<AdminSection>('overview')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [connected, setConnected] = useState(false)
   const [socket, setSocket] = useState<Socket | null>(null)
@@ -84,7 +85,7 @@ function App() {
       case 'subscriptions': return <SubscriptionsModule />
       case 'settings': return <SettingsModule />
       case 'support': return <SupportModule siteSettings={siteSettings} />
-      case 'admin': return canAdmin ? <AdminModule /> : <ChatModule socket={socket} />
+      case 'admin': return canAdmin ? <AdminModule initialSection={adminSection} onSectionChange={setAdminSection} /> : <ChatModule socket={socket} />
     }
   }, [visibleSection, canAdmin, socket, requestedRoomId, requestedGroupId, siteSettings])
 
@@ -95,7 +96,16 @@ function App() {
       {siteSettings.maintenanceMode && session.user.role !== 'platform_admin' && (
         <div className="maintenance-banner" role="status"><strong>{siteSettings.name} is in maintenance mode</strong><span>Some features may be temporarily unavailable.</span></div>
       )}
-      <Sidebar active={visibleSection} onChange={(section) => { setActive(section); setMobileOpen(false) }} open={mobileOpen} canAdmin={canAdmin} user={session.user} brandName={siteSettings.name} />
+      <Sidebar
+        active={visibleSection}
+        onChange={(section) => { setActive(section); setMobileOpen(false) }}
+        open={mobileOpen}
+        canAdmin={canAdmin}
+        user={session.user}
+        brandName={siteSettings.name}
+        adminSection={adminSection}
+        onAdminSectionChange={(section) => { setAdminSection(section); setActive('admin'); setMobileOpen(false) }}
+      />
       {mobileOpen && <button className="sidebar-overlay" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
       <main className="main">
         <TopBar title={title[0]} subtitle={title[1]} onMenu={() => setMobileOpen(v => !v)} />

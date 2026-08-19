@@ -32,14 +32,14 @@ export const subscriptionRepository = {
     });
   },
 
-  async findAllPlans() {
+  async findAllPlans(options?: { includeInactive?: boolean }) {
     return prisma.subscriptionPlan.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: {
-        price: "asc",
-      },
+      where: options?.includeInactive ? undefined : { isActive: true },
+      orderBy: [
+        { isActive: "desc" },
+        { price: "asc" },
+        { createdAt: "desc" },
+      ],
     });
   },
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../lib'
+import type { AdminSection } from '../../types/app'
 
 type Analytics = {
   users: number
@@ -38,6 +39,11 @@ type AdminUser = {
 type Plan = {
   id: string
   name: string
+  description?: string | null
+  price?: number | string
+  durationDays?: number
+  accessLevel?: 'FULL' | 'READONLY' | 'LOCKED'
+  isActive?: boolean
   maxGroups: number | null
   maxMembersPerGroup: number | null
   maxCommunities: number | null
@@ -227,241 +233,186 @@ function MediaBackupPanel() {
    PLAN LIMITS PANEL
 ========================================================= */
 
-function PlanLimitsPanel() {
+function PlanManagementPanel() {
   const [plans, setPlans] = useState<Plan[] | null>(null)
-
-  const [drafts, setDrafts] = useState<
-    Record<string, Partial<Plan>>
-  >({})
-
-  const [saving, setSaving] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Partial<Plan> | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
   function load() {
-    setError(null)
-
-    api
-      .plans()
-      .then((r) => {
-        setPlans(r.data.plans || [])
-      })
-      .catch((e) => {
+    setError('')
+    api.adminPlans()
+      .then((r) => setPlans(r.data.plans || []))
+      .catch((e: any) => {
         setPlans([])
         setError(e?.message || 'Failed to load plans')
       })
   }
 
-  useEffect(() => {
-    const loadPlans = async () => {
-      load()
-    }
-    loadPlans()
-  }, [])
+  useEffect(() => { load() }, [])
 
-  function field(
-    plan: Plan,
-    key:
-      | 'maxGroups'
-      | 'maxMembersPerGroup'
-      | 'maxCommunities'
-      | 'maxGuestsPerGroup'
-  ): number | '' {
-    const draftValue = drafts[plan.id]?.[key]
-
-    const value =
-      draftValue !== undefined
-        ? draftValue
-        : plan[key]
-
-    return value === null || value === undefined
-      ? ''
-      : (value as number)
+  function beginCreate() {
+    setMessage('')
+    setError('')
+    setEditing({
+      name: '',
+      description: '',
+      price: 0,
+      durationDays: 30,
+      accessLevel: 'FULL',
+      isActive: true,
+      maxGroups: null,
+      maxMembersPerGroup: null,
+      maxCommunities: null,
+      maxGuestsPerGroup: null,
+    })
   }
 
-  function setField(
-    planId: string,
-    key:
-      | 'maxGroups'
-      | 'maxMembersPerGroup'
-      | 'maxCommunities'
-      | 'maxGuestsPerGroup',
-    raw: string
-  ) {
-    let value: number | null
-
-    if (raw.trim() === '') {
-      value = null
-    } else {
-      const parsed = Number(raw)
-
-      if (!Number.isFinite(parsed)) {
-        return
-      }
-
-      value = parsed
-    }
-
-    setDrafts((previous) => ({
-      ...previous,
-      [planId]: {
-        ...previous[planId],
-        [key]: value,
-      },
-    }))
+  function beginEdit(plan: Plan) {
+    setMessage('')
+    setError('')
+    setEditing({ ...plan })
   }
 
-  async function save(plan: Plan) {
-    const draft = drafts[plan.id]
+  function numberOrNull(value: string) {
+    if (value.trim() === '') return null
+    const n = Number(value)
+    return Number.isFinite(n) ? n : null
+  }
 
-    if (!draft) {
+  async function save() {
+    if (!editing) return
+    if (!String(editing.name || '').trim()) {
+      setError('Plan name is required.')
       return
     }
 
-    setSaving(plan.id)
-    setError(null)
+    const payload = {
+      name: String(editing.name).trim(),
+      description: String(editing.description || '').trim() || undefined,
+      price: Number(editing.price ?? 0),
+      durationDays: Number(editing.durationDays ?? 30),
+      accessLevel: (editing.accessLevel || 'FULL') as 'FULL' | 'READONLY' | 'LOCKED',
+      isActive: editing.isActive !== false,
+      maxGroups: editing.maxGroups ?? null,
+      maxMembersPerGroup: editing.maxMembersPerGroup ?? null,
+      maxCommunities: editing.maxCommunities ?? null,
+      maxGuestsPerGroup: editing.maxGuestsPerGroup ?? null,
+    }
 
+    setSaving(true)
+    setError('')
+    setMessage('')
     try {
-      await api.updatePlan(plan.id, draft)
-
-      setDrafts((previous) => {
-        const next = { ...previous }
-
-        delete next[plan.id]
-
-        return next
-      })
-
+      if (editing.id) {
+        await api.updatePlan(editing.id, payload)
+        setMessage('Plan updated successfully.')
+      } else {
+        await api.createPlan(payload)
+        setMessage('Plan created successfully.')
+      }
+      setEditing(null)
       load()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to update plan')
+    } catch (e: any) {
+      setError(e?.message || 'Unable to save plan')
     } finally {
-      setSaving(null)
+      setSaving(false)
     }
   }
 
+  async function togglePlan(plan: Plan) {
+    setSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      await api.updatePlan(plan.id, { isActive: !plan.isActive })
+      setMessage(`Plan ${plan.isActive ? 'deactivated' : 'activated'} successfully.`)
+      load()
+    } catch (e: any) {
+      setError(e?.message || 'Unable to change plan status')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const editNumber = (
+    key: 'maxGroups' | 'maxMembersPerGroup' | 'maxCommunities' | 'maxGuestsPerGroup'
+  ) => (
+    <label className="plan-limit-field">
+      <span>{key === 'maxMembersPerGroup' ? 'Members / group' : key === 'maxGuestsPerGroup' ? 'Guests / group' : key.replace('max', 'Max ')}</span>
+      <input
+        type="number"
+        min={1}
+        value={editing?.[key] ?? ''}
+        onChange={(e) => setEditing((prev) => prev ? ({ ...prev, [key]: numberOrNull(e.target.value) }) : prev)}
+        placeholder="Unlimited"
+      />
+    </label>
+  )
+
   return (
-    <div
-      className="admin-table"
-      style={{ marginTop: 16 }}
-    >
+    <div className="admin-table admin-section-card">
       <div className="table-head">
-        <strong>Plan limits</strong>
+        <div>
+          <strong>Plan management</strong>
+          <small>Create, edit, activate/deactivate plans and configure feature limits.</small>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="secondary" type="button" onClick={load}>Refresh</button>
+          <button className="primary" type="button" onClick={beginCreate}>Create plan</button>
+        </div>
       </div>
 
-      {error && (
-        <div
-          className="notice"
-          style={{ marginTop: 10 }}
-        >
-          <strong>Error</strong>
-          <span>{error}</span>
-          <button onClick={load}>Retry</button>
+      {message && <div className="notice" style={{ margin: '10px 0' }}><span>{message}</span></div>}
+      {error && <div className="notice admin-error" style={{ margin: '10px 0' }}><strong>Error</strong><span>{error}</span></div>}
+
+      {editing && (
+        <div className="admin-form-card plan-management-form">
+          <div className="form-grid">
+            <label><span>Plan name</span><input value={String(editing.name || '')} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Professional" /></label>
+            <label><span>Price (₹)</span><input type="number" min={0} step="0.01" value={editing.price ?? 0} onChange={(e) => setEditing({ ...editing, price: Number(e.target.value) })} /></label>
+            <label><span>Duration (days)</span><input type="number" min={1} value={editing.durationDays ?? 30} onChange={(e) => setEditing({ ...editing, durationDays: Number(e.target.value) })} /></label>
+            <label><span>Access level</span><select value={editing.accessLevel || 'FULL'} onChange={(e) => setEditing({ ...editing, accessLevel: e.target.value as Plan['accessLevel'] })}><option value="FULL">FULL</option><option value="READONLY">READONLY</option><option value="LOCKED">LOCKED</option></select></label>
+            <label className="form-grid-full"><span>Description</span><textarea rows={3} value={String(editing.description || '')} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="What this plan includes" /></label>
+          </div>
+          <div className="plan-limits-form">
+            {editNumber('maxGroups')}
+            {editNumber('maxMembersPerGroup')}
+            {editNumber('maxCommunities')}
+            {editNumber('maxGuestsPerGroup')}
+          </div>
+          <label className="check-row" style={{ marginTop: 12 }}>
+            <input type="checkbox" checked={editing.isActive !== false} onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })} />
+            Active plan
+          </label>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button className="primary" type="button" disabled={saving} onClick={() => void save()}>{saving ? 'Saving…' : editing.id ? 'Save changes' : 'Create plan'}</button>
+            <button className="secondary" type="button" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+          </div>
         </div>
       )}
 
-      {plans === null && <p>Loading…</p>}
-
-      {plans !== null && plans.length === 0 && !error && (
-        <p>No subscription plans found.</p>
-      )}
+      {plans === null && <p>Loading plans…</p>}
+      {plans?.length === 0 && !error && <p>No plans found.</p>}
 
       {plans?.map((plan) => (
-        <div
-          className="table-row"
-          key={plan.id}
-        >
-          <div>
-            <strong>{plan.name}</strong>
+        <div className="table-row plan-row" key={plan.id}>
+          <div className="plan-row-main">
+            <div className="plan-row-title">
+              <strong>{plan.name}</strong>
+              <span className={plan.isActive ? 'plan-status active' : 'plan-status'}>{plan.isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+            <small>{plan.description || 'No description'} · {plan.durationDays ?? '—'} days · {plan.accessLevel || 'FULL'} · ₹{String(plan.price ?? '0')}</small>
           </div>
-
-          <label>
-            Max groups
-
-            <input
-              style={{ width: 70 }}
-              type="number"
-              min={1}
-              value={field(plan, 'maxGroups')}
-              onChange={(event) =>
-                setField(
-                  plan.id,
-                  'maxGroups',
-                  event.target.value
-                )
-              }
-              placeholder="∞"
-            />
-          </label>
-
-          <label>
-            Max members/group
-
-            <input
-              style={{ width: 70 }}
-              type="number"
-              min={1}
-              value={field(plan, 'maxMembersPerGroup')}
-              onChange={(event) =>
-                setField(
-                  plan.id,
-                  'maxMembersPerGroup',
-                  event.target.value
-                )
-              }
-              placeholder="∞"
-            />
-          </label>
-
-          <label>
-            Max communities
-
-            <input
-              style={{ width: 70 }}
-              type="number"
-              min={1}
-              value={field(plan, 'maxCommunities')}
-              onChange={(event) =>
-                setField(
-                  plan.id,
-                  'maxCommunities',
-                  event.target.value
-                )
-              }
-              placeholder="∞"
-            />
-          </label>
-
-          <label>
-            Max guests/group
-
-            <input
-              style={{ width: 70 }}
-              type="number"
-              min={1}
-              value={field(plan, 'maxGuestsPerGroup')}
-              onChange={(event) =>
-                setField(
-                  plan.id,
-                  'maxGuestsPerGroup',
-                  event.target.value
-                )
-              }
-              placeholder="∞"
-            />
-          </label>
-
-          <button
-            className="icon-btn"
-            disabled={
-              saving === plan.id ||
-              !drafts[plan.id]
-            }
-            onClick={() => save(plan)}
-          >
-            {saving === plan.id
-              ? 'Saving…'
-              : 'Save'}
-          </button>
+          <div className="plan-row-limits">
+            <span>Groups: {plan.maxGroups ?? '∞'}</span>
+            <span>Members: {plan.maxMembersPerGroup ?? '∞'}</span>
+            <span>Communities: {plan.maxCommunities ?? '∞'}</span>
+            <span>Guests: {plan.maxGuestsPerGroup ?? '∞'}</span>
+          </div>
+          <button className="icon-btn" type="button" disabled={saving} onClick={() => beginEdit(plan)}>Edit</button>
+          <button className="icon-btn" type="button" disabled={saving} onClick={() => void togglePlan(plan)}>{plan.isActive ? 'Deactivate' : 'Activate'}</button>
         </div>
       ))}
     </div>
@@ -586,12 +537,21 @@ function SiteSettingsPanel() {
    ADMIN MODULE
 ========================================================= */
 
-export function AdminModule() {
-  const [adminTab, setAdminTab] = useState<'overview'|'payments'|'users'|'plans'|'media'|'site'>('overview')
+export function AdminModule({
+  initialSection = 'overview',
+  onSectionChange,
+}: {
+  initialSection?: AdminSection
+  onSectionChange?: (section: AdminSection) => void
+}) {
+  const [adminTab, setAdminTab] = useState<AdminSection>(initialSection)
 
-  function jumpTo(tab: typeof adminTab, id: string) {
+  function jumpTo(tab: AdminSection, id: string) {
     setAdminTab(tab)
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    onSectionChange?.(tab)
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   }
   const [analytics, setAnalytics] =
     useState<Analytics | null>(null)
@@ -601,12 +561,39 @@ export function AdminModule() {
 
   const [users, setUsers] =
     useState<AdminUser[] | null>(null)
+  const [userPage, setUserPage] = useState(1)
+  const [userPageSize, setUserPageSize] = useState(10)
+  const [userTotal, setUserTotal] = useState(0)
+  const [userTotalPages, setUserTotalPages] = useState(1)
 
   const [error, setError] =
     useState<string | null>(null)
 
   const [busy, setBusy] =
     useState<string | null>(null)
+
+  function loadUsers(page = userPage, pageSize = userPageSize) {
+    api
+      .adminUsers(page, pageSize)
+      .then((r) => {
+        setUsers(r.data.users || [])
+        setUserTotal(r.data.total || 0)
+        setUserTotalPages(r.data.totalPages || 1)
+      })
+      .catch(() => {
+        setUsers([])
+        setUserTotal(0)
+        setUserTotalPages(1)
+      })
+  }
+
+  useEffect(() => {
+    loadUsers(userPage, userPageSize)
+  }, [userPage, userPageSize])
+
+  useEffect(() => {
+    setAdminTab(initialSection)
+  }, [initialSection])
 
   function load() {
     setError(null)
@@ -634,14 +621,7 @@ export function AdminModule() {
         setRequests([])
       })
 
-    api
-      .adminUsers()
-      .then((r) => {
-        setUsers(r.data.users || [])
-      })
-      .catch(() => {
-        setUsers([])
-      })
+    loadUsers()
   }
 
   useEffect(() => {
@@ -933,7 +913,11 @@ export function AdminModule() {
       <div id="admin-users" className="admin-table admin-section-card" style={{ marginTop: 16 }}
       >
         <div className="table-head">
-          <strong>Users</strong>
+          <div>
+            <strong>Users</strong>
+            <small>{userTotal} total users · page {userPage} of {userTotalPages}</small>
+          </div>
+          <label className="page-size-select"><span>Rows</span><select value={userPageSize} onChange={(e) => { setUserPage(1); setUserPageSize(Number(e.target.value)) }}><option value={5}>5</option><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label>
         </div>
 
         {users === null && (
@@ -946,8 +930,7 @@ export function AdminModule() {
           )}
 
         {users
-          ?.slice(0, 20)
-          .map((user) => (
+          ?.map((user) => (
             <div
               className="table-row"
               key={user.id}
@@ -992,14 +975,23 @@ export function AdminModule() {
               </button>
             </div>
           ))}
+      <div className="users-pagination">
+        <button className="secondary" type="button" disabled={userPage <= 1} onClick={() => setUserPage((page) => Math.max(1, page - 1))}>Previous</button>
+        <div>
+          <strong>Page {userPage}</strong>
+          <span>of {userTotalPages}</span>
+        </div>
+        <button className="secondary" type="button" disabled={userPage >= userTotalPages} onClick={() => setUserPage((page) => Math.min(userTotalPages, page + 1))}>Next</button>
+      </div>
+
       </div>
 
       {/* =====================================================
-          PLAN LIMITS
+          PLAN MANAGEMENT
       ====================================================== */}
 
       <div id="admin-plans" className="admin-anchor" />
-      <PlanLimitsPanel />
+      <PlanManagementPanel />
 
       {/* =====================================================
           MEDIA BACKUP

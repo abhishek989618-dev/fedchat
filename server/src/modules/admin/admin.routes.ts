@@ -6,6 +6,9 @@ import {
   getUser,
   updateUserStatus,
   forceLogoutUser,
+  getPlans,
+  createAdminPlan,
+  updateAdminPlan,
 } from "./admin.controller.js";
 
 import { authenticate } from "../../core/middleware/auth.middleware.js";
@@ -45,6 +48,32 @@ router.post(
   authenticate,
   requirePermission("admin.users.manage"),
   forceLogoutUser
+);
+
+
+// =====================================================
+// SUBSCRIPTION PLANS
+// =====================================================
+
+router.get(
+  "/plans",
+  authenticate,
+  requirePermission("subscriptions.manage"),
+  getPlans
+);
+
+router.post(
+  "/plans",
+  authenticate,
+  requirePermission("subscriptions.manage"),
+  createAdminPlan
+);
+
+router.patch(
+  "/plans/:id",
+  authenticate,
+  requirePermission("subscriptions.manage"),
+  updateAdminPlan
 );
 
 router.use(

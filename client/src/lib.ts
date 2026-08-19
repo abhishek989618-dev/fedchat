@@ -106,11 +106,17 @@ export type SearchResult = {
 export type Plan = {
   id: string
   name: string
+  description?: string | null
+  price?: number | string
+  durationDays?: number
+  accessLevel?: 'FULL' | 'READONLY' | 'LOCKED'
+  isActive?: boolean
   maxGroups: number | null
   maxMembersPerGroup: number | null
   maxCommunities: number | null
   maxGuestsPerGroup: number | null
-  price?: number
+  createdAt?: string
+  updatedAt?: string
 }
 export type AdminUser = {
   id: string
@@ -253,7 +259,9 @@ export const api = {
   attachGroupToCommunity: (id: string, roomId: string) => request<{success:boolean}>(`/communities/${id}/groups/${roomId}`, {method:'POST'}),
   communityAnnouncements: (id: string) => request<{success:boolean;data:{announcements:Announcement[]}}>(`/communities/${id}/announcements`),
   postCommunityAnnouncement: (id: string, data: {title: string; content: string}) => request<{success:boolean;data:{announcement:Record<string, unknown>}}>(`/communities/${id}/announcements`, {method:'POST', body:JSON.stringify(data)}),
-  updatePlan: (id: string, data: {maxGroups?: number|null; maxMembersPerGroup?: number|null; maxCommunities?: number|null; maxGuestsPerGroup?: number|null}) => request<{success:boolean;data:{plan:Record<string, unknown>}}>(`/subscriptions/plans/${id}`, {method:'PATCH', body:JSON.stringify(data)}),
+  createPlan: (data: {name:string; description?:string; price:number; durationDays:number; accessLevel:'FULL'|'READONLY'|'LOCKED'; maxGroups?:number|null; maxMembersPerGroup?:number|null; maxCommunities?:number|null; maxGuestsPerGroup?:number|null}) => request<{success:boolean;data:{plan:Plan}}>(`/admin/plans`, {method:'POST', body:JSON.stringify(data)}),
+  adminPlans: () => request<{success:boolean;data:{plans:Plan[]}}>(`/admin/plans`),
+  updatePlan: (id: string, data: {name?:string; description?:string; price?:number; durationDays?:number; accessLevel?:'FULL'|'READONLY'|'LOCKED'; isActive?:boolean; maxGroups?: number|null; maxMembersPerGroup?: number|null; maxCommunities?: number|null; maxGuestsPerGroup?: number|null}) => request<{success:boolean;data:{plan:Plan}}>(`/admin/plans/${id}`, {method:'PATCH', body:JSON.stringify(data)}),
   createMediaBackup: () => request<{success:boolean;data:{backup:{filename:string;sizeBytes:number;mediaCount:number;totalMediaAssets:number;createdAt:string}}}>('/media/admin/backup', {method:'POST'}),
   listMediaBackups: () => request<{success:boolean;data:{backups:{filename:string;sizeBytes:number;createdAt:string}[]}}>('/media/admin/backups'),
   wipeMedia: (backupFile: string) => request<{success:boolean;message:string;data:{wiped:number}}>('/media/admin/wipe', {method:'POST', body:JSON.stringify({backupFile})}),
@@ -272,7 +280,7 @@ export const api = {
     URL.revokeObjectURL(url)
   },
   adminAnalytics: () => request<{success:boolean;data:{analytics:{users:number;rooms:number;messages:number;subscriptions:number;pendingPayments:number;activeUsers24h:number}}}>('/admin/analytics'),
-  adminUsers: () => request<{success:boolean;data:{users:AdminUser[]}}>('/admin/users'),
+  adminUsers: (page = 1, pageSize = 10) => request<{success:boolean;data:{users:AdminUser[];total:number;page:number;pageSize:number;totalPages:number}}>(`/admin/users?page=${page}&pageSize=${pageSize}`),
   adminUpdateUserStatus: (id: string, status: string) => request<{success:boolean;data:{user:Record<string, unknown>}}>(`/admin/users/${id}/status`, {method:'PATCH', body:JSON.stringify({status})}),
   siteSettings: () => request<{success:boolean;data:{settings:any[]}}>(`/admin/settings`),
   publicSiteSettings: () => request<{success:boolean;data:{settings:Record<string, unknown>} }>(`/settings`),

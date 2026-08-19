@@ -1,0 +1,59 @@
+FedChat Admin Console Update — Plan Management + Sidebar + User Pagination
+===============================================================
+
+Implemented:
+1. Admin plan management:
+   - Create subscription plans.
+   - Edit name, description, price, duration and access level.
+   - Configure max groups, members/group, communities and guests/group.
+   - Activate/deactivate existing plans.
+   - Admin-only endpoint returns active + inactive plans.
+   - Normal user plan listing remains active-only.
+
+2. Admin sidebar:
+   - Added expandable Admin Console submenu.
+   - Submenus: Overview, Payments, Users, Plans, Media, Site settings.
+   - Sidebar submenu selection synchronizes with the Admin Console top navigation.
+   - Existing sticky top admin navigation remains available.
+
+3. Users listing pagination:
+   - Pagination is now server-side.
+   - API accepts page and pageSize.
+   - API returns total, current page, page size and total pages.
+   - Admin UI supports 5 / 10 / 20 / 50 rows per page.
+   - Previous / Next controls and total-user count added.
+   - Removed the old client-side `.slice(0, 20)` behavior.
+
+4. Existing public plan behavior preserved:
+   - /subscriptions/plans still returns only active plans to normal authenticated users.
+   - Admin plan actions require the existing `subscriptions.manage` permission.
+
+Files modified:
+- server/src/modules/admin/admin.repository.ts
+- server/src/modules/admin/admin.service.ts
+- server/src/modules/admin/admin.controller.ts
+- server/src/modules/admin/admin.routes.ts
+- server/src/modules/subscriptions/subscription.repository.ts
+- server/src/modules/subscriptions/subscription.service.ts
+- client/src/lib.ts
+- client/src/types/app.ts
+- client/src/App.tsx
+- client/src/components/layout/Sidebar.tsx
+- client/src/modules/admin/AdminModule.tsx
+- client/src/App.css
+
+Database:
+- No schema/migration changes were required for these features.
+- The existing SubscriptionPlan fields and subscriptions.manage permission are reused.
+
+New admin endpoints:
+- GET    /admin/plans
+- POST   /admin/plans
+- PATCH  /admin/plans/:id
+
+Updated users endpoint:
+- GET /admin/users?page=1&pageSize=10
+
+Verification:
+- Dependency-independent TypeScript syntax checks found no syntax errors in changed TS/TSX files.
+- Full npm builds could not be completed in this environment because the supplied project node_modules is incomplete/permission-restricted; no successful full compile result is claimed.

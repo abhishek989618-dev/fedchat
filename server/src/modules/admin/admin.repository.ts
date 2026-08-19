@@ -6,22 +6,45 @@ export const adminRepository = {
   // USERS
   // =====================================================
 
-  async findUsers() {
-    return prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+  async findUsers(params?: {
+    page?: number;
+    pageSize?: number;
+  }) {
+    const page = Math.max(1, Math.floor(params?.page ?? 1));
+    const pageSize = Math.min(
+      100,
+      Math.max(5, Math.floor(params?.pageSize ?? 10))
+    );
+    const skip = (page - 1) * pageSize;
+
+    const [users, total] = await prisma.$transaction([
+      prisma.user.findMany({
+        skip,
+        take: pageSize,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      }),
+      prisma.user.count(),
+    ]);
+
+    return {
+      users,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
   },
 
   async findUserById(id: string) {
