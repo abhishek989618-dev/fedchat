@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  theme VARCHAR(16) NOT NULL DEFAULT 'light',
+  language VARCHAR(10) NOT NULL DEFAULT 'en',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

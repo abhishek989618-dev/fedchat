@@ -116,6 +116,19 @@ function mergeMessages(existing: Message[], incoming: Message) {
   return next
 }
 
+// A room can be opened and receive a message before its initial history
+// request completes. Keep optimistic messages that are not yet in the server
+// response so that the empty-conversation state cannot reappear after Send.
+function mergeLoadedMessages(existing: Message[], loaded: Message[]) {
+  const confirmedTexts = new Set(
+    loaded.filter((message) => message.fromMe).map((message) => message.text),
+  )
+  const pending = existing.filter(
+    (message) => message.id.startsWith('local-') && !confirmedTexts.has(message.text),
+  )
+  return pending.reduce(mergeMessages, loaded)
+}
+
 function normalizeRoom(room: AnyRecord): Chat {
   const me = currentUserId()
   let name = typeof room?.name === 'string' && room.name.trim() ? room.name.trim() : 'Conversation'
@@ -212,7 +225,20 @@ export function ChatModule({ socket, initialRoomId = '' }: { socket: Socket | nu
             .filter((room: AnyRecord) => room?.id)
             .map(normalizeRoom)
         : []
-      setItems(rooms)
+      setItems((previous) => {
+        const previousById = new Map(previous.map((chat) => [chat.id, chat]))
+        return rooms.map((room) => {
+          const existing = previousById.get(room.id)
+          if (!existing) return room
+          return {
+            ...existing,
+            ...room,
+            // The rooms endpoint is sidebar metadata and may intentionally omit history.
+            // Never let that response wipe the messages already visible in the active chat.
+            messages: existing.messages.length ? existing.messages : room.messages,
+          }
+        })
+      })
       setSelected((current) =>
         initialRoomId && rooms.some((room) => room.id === initialRoomId)
           ? initialRoomId
@@ -268,17 +294,17 @@ export function ChatModule({ socket, initialRoomId = '' }: { socket: Socket | nu
 
         void api.markRoomRead(selected).catch(() => undefined)
         setItems((previous) =>
-          previous.map((chat) =>
-            chat.id === selected
-              ? {
-                  ...chat,
-                  unread: 0,
-                  messages,
-                  lastMessage: messages.at(-1)?.text || chat.lastMessage,
-                  time: messages.at(-1)?.time || chat.time,
-                }
-              : chat,
-          ),
+          previous.map((chat) => {
+            if (chat.id !== selected) return chat
+            const mergedMessages = mergeLoadedMessages(chat.messages, messages)
+            return {
+              ...chat,
+              unread: 0,
+              messages: mergedMessages,
+              lastMessage: mergedMessages.at(-1)?.text || chat.lastMessage,
+              time: mergedMessages.at(-1)?.time || chat.time,
+            }
+          }),
         )
 
         if (messages.length) {
@@ -319,13 +345,21 @@ export function ChatModule({ socket, initialRoomId = '' }: { socket: Socket | nu
       setItems((previous) =>
         upsertChat(previous, roomId, (chat) => {
           const exists = chat.messages.some((item) => item.id === message.id)
+          const optimisticMatch = message.fromMe
+            ? chat.messages.find((item) => item.id.startsWith('local-') && item.text === message.text)
+            : undefined
           return {
             ...chat,
             unread:
               roomId === selected || message.fromMe
                 ? 0
                 : (chat.unread ?? 0) + (exists ? 0 : 1),
-            messages: exists ? chat.messages : mergeMessages(chat.messages, message),
+            messages: exists
+              ? chat.messages
+              : mergeMessages(
+                  optimisticMatch ? chat.messages.filter((item) => item.id !== optimisticMatch.id) : chat.messages,
+                  message,
+                ),
             lastMessage: message.deleted ? 'Message deleted' : message.text,
             time: message.time || chat.time,
           }
@@ -352,6 +386,7 @@ export function ChatModule({ socket, initialRoomId = '' }: { socket: Socket | nu
           return upsertChat(previous, roomId, (chat) => ({
             ...chat,
             unread: roomId === selected || message.fromMe ? 0 : (chat.unread ?? 0) + 1,
+            messages: mergeMessages(chat.messages, message),
             lastMessage: message.deleted ? 'Message deleted' : message.text,
             time: message.time || chat.time,
           }))
@@ -374,6 +409,9 @@ export function ChatModule({ socket, initialRoomId = '' }: { socket: Socket | nu
               return upsertChat(previous, roomId, (chat) => ({
                 ...chat,
                 ...normalized,
+                // Room details can contain an empty messages array. Preserve
+                // the live/optimistic history already shown in this chat.
+                messages: chat.messages,
                 unread: roomId === selected || message.fromMe ? 0 : Math.max(chat.unread ?? 0, normalized.unread ?? 0, 1),
                 lastMessage: message.deleted ? 'Message deleted' : message.text,
                 time: message.time || chat.time,
@@ -625,13 +663,45 @@ export function ChatModule({ socket, initialRoomId = '' }: { socket: Socket | nu
     if (!selectedChat || !socket || !content) return
 
     const payload = { text: content, ...(replyingTo ? { replyTo: { id: replyingTo.id, text: replyingTo.text, senderName: replyingTo.fromMe ? 'You' : selectedChat.name, kind: replyingTo.kind } } : {}) }
+    const optimistic: Message = {
+      id: `local-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      text: content,
+      time: new Date().toISOString(),
+      fromMe: true,
+      kind: 'text',
+      status: 'sent',
+      ...(replyingTo ? { replyTo: { id: replyingTo.id, text: replyingTo.text, senderName: replyingTo.fromMe ? 'You' : selectedChat.name, kind: replyingTo.kind } } : {}),
+    }
+    setItems(previous => upsertChat(previous, selectedChat.id, chat => ({
+      ...chat,
+      messages: mergeMessages(chat.messages, optimistic),
+      lastMessage: content,
+      time: optimistic.time,
+    })))
     socket.emit(
       'message:send',
       { roomId: selectedChat.id, content: replyingTo ? JSON.stringify(payload) : content, messageType: 'text' },
       (response: AnyRecord) => {
         if (!response?.success) {
           setNotice(response?.message || 'Message could not be sent.')
+          setItems((previous) => upsertChat(previous, selectedChat.id, (chat) => ({
+            ...chat,
+            messages: chat.messages.filter((message) => message.id !== optimistic.id),
+          })))
+          return
         }
+        const saved = response?.data?.message
+        if (!saved?.id) return
+        const confirmed = normalizeMessage(saved)
+        setItems((previous) => upsertChat(previous, selectedChat.id, (chat) => ({
+          ...chat,
+          messages: mergeMessages(
+            chat.messages.filter((message) => message.id !== optimistic.id),
+            confirmed,
+          ),
+          lastMessage: confirmed.text || chat.lastMessage,
+          time: confirmed.time || chat.time,
+        })))
       },
     )
     setReplyingTo(null)

@@ -12,7 +12,11 @@ export class AuthRepository {
         });
     }
 
-    async findUserByUsername(username: string) {
+    async findUserByPhone(phone: string) {
+    return prisma.user.findUnique({ where: { phone }, include: { role: true } });
+  }
+
+  async findUserByUsername(username: string) {
         return prisma.user.findUnique({
             where: {
                 username

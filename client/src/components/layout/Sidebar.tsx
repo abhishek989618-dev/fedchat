@@ -31,6 +31,7 @@ export function Sidebar({
   canAdmin,
   user,
   brandName = 'FedChat',
+  logoUrl = '',
   adminSection = 'overview',
   onAdminSectionChange,
 }: {
@@ -40,6 +41,7 @@ export function Sidebar({
   canAdmin: boolean
   user: User
   brandName?: string
+  logoUrl?: string
   adminSection?: AdminSection
   onAdminSectionChange?: (section: AdminSection) => void
 }) {
@@ -47,7 +49,7 @@ export function Sidebar({
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">
-        <span className="brand-mark">{brandName.slice(0, 1).toUpperCase()}</span>
+        <span className="brand-mark">{logoUrl ? <img src={assetUrl(logoUrl)} alt="" /> : brandName.slice(0, 1).toUpperCase()}</span>
         <div className="brand-copy">
           <strong>{brandName}</strong>
           <span>Connected workspace</span>

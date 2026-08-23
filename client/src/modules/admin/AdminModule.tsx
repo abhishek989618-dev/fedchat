@@ -455,6 +455,11 @@ function SiteSettingsPanel() {
     'site.registrationEnabled': true,
     'site.primaryColor': '#168a57',
     'site.accentColor': '#1da968',
+    'site.logoUrl': '',
+    'site.faviconUrl': '',
+    'site.language': 'en',
+    'site.alertLanguage': 'en',
+    'site.theme': 'light',
     'site.maintenanceMode': false,
   }
 
@@ -477,6 +482,7 @@ function SiteSettingsPanel() {
     setMessage('')
     try {
       await api.updateSiteSetting(key, settings[key])
+      window.dispatchEvent(new CustomEvent('fedchat:site-settings-changed'))
       setMessage('Site setting saved.')
     } catch (e: any) {
       setMessage(e?.message || 'Unable to save site setting')
@@ -523,6 +529,11 @@ function SiteSettingsPanel() {
         {textField('site.description', 'Site description')}
         {textField('site.primaryColor', 'Primary color', '#168a57')}
         {textField('site.accentColor', 'Accent color', '#1da968')}
+        {textField('site.logoUrl', 'Platform logo URL', '/uploads/logo.png')}
+        {textField('site.faviconUrl', 'Favicon URL', '/favicon.svg')}
+        {textField('site.language', 'Platform language', 'en or hi')}
+        {textField('site.alertLanguage', 'Alert language', 'en or hi')}
+        {textField('site.theme', 'Platform theme', 'light or dark')}
       </div>
       <div className="site-setting-toggles">
         {toggleField('site.guestJoinEnabled', 'Guest join links', 'Allow public group links to create read-only guest accounts.')}

@@ -52,10 +52,21 @@ model User {
   communityMembers       CommunityMember[]
   communityAnnouncements CommunityAnnouncement[]
   communities            Community[]
+  userPreferences        UserPreference[]
 
   @@index([roleId])
   @@index([status])
   @@map("users")
+}
+
+model UserPreference {
+  userId    String   @id @map("user_id") @db.Uuid
+  theme     String   @default("light")
+  language  String   @default("en")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
 }
 
 model Role {

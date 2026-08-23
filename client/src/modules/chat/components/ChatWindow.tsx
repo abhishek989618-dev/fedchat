@@ -35,6 +35,7 @@ export function ChatWindow({ chat, onSend, onSendMedia, readOnly = false, socket
   const [infoOpen, setInfoOpen] = useState(false)
   const [recording, setRecording] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [pendingMedia, setPendingMedia] = useState<{file: File; type: 'audio'|'image'|'video'|'file'; preview: string} | null>(null)
   const [selectedMessages, setSelectedMessages] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -72,10 +73,40 @@ export function ChatWindow({ chat, onSend, onSendMedia, readOnly = false, socket
     const node = [...document.querySelectorAll('.chat-window .bubble p')].find((element) => element.textContent?.toLowerCase().includes(needle))
     node?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
-  const chooseFile = async (file: File) => {
+  const chooseFile = (file: File) => {
     if (!onSendMedia || readOnly) return
-    setUploading(true); try { const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file'; await onSendMedia(file, type) } finally { setUploading(false) }
+    const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'file'
+    const preview = type === 'image' || type === 'video' ? URL.createObjectURL(file) : ''
+    setPendingMedia({ file, type, preview })
   }
+  const confirmMedia = async () => {
+  if (!pendingMedia || !onSendMedia || uploading) return
+
+  setUploading(true)
+
+  try {
+    await onSendMedia(pendingMedia.file, pendingMedia.type)
+
+    if (pendingMedia.preview) {
+      URL.revokeObjectURL(pendingMedia.preview)
+    }
+
+    setPendingMedia(null)
+  } catch (error) {
+    console.error('Failed to send media:', error)
+    window.alert('Failed to send media. Please try again.')
+  } finally {
+    setUploading(false)
+  }
+}
+
+const cancelMedia = () => {
+  if (pendingMedia?.preview) {
+    URL.revokeObjectURL(pendingMedia.preview)
+  }
+
+  setPendingMedia(null)
+}
   const toggleRecording = async () => {
     if (readOnly || !onSendMedia) return
     if (recording && recorderRef.current) { recorderRef.current.stop(); return }
@@ -134,6 +165,83 @@ export function ChatWindow({ chat, onSend, onSendMedia, readOnly = false, socket
     </div>
 
     {!readOnly ? <>
+    {pendingMedia && (
+  <div className="media-preview-overlay" role="dialog" aria-modal="true" aria-label="Preview attachment">
+    <div className="media-preview-panel">
+      <div className="media-preview-header">
+        <div>
+          <span className="eyebrow">ATTACHMENT</span>
+          <strong>Preview before sending</strong>
+        </div>
+
+        <button
+          className="icon-btn"
+          type="button"
+          onClick={cancelMedia}
+          disabled={uploading}
+          aria-label="Close media preview"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="media-preview-content">
+        {pendingMedia.type === 'image' && pendingMedia.preview ? (
+          <img
+            src={pendingMedia.preview}
+            alt={pendingMedia.file.name}
+            className="media-preview-image"
+          />
+        ) : pendingMedia.type === 'video' && pendingMedia.preview ? (
+          <video
+            src={pendingMedia.preview}
+            className="media-preview-video"
+            controls
+          />
+        ) : (
+          <div className="media-preview-file">
+            <div className="media-preview-file-icon">
+              <Icon name="file" />
+            </div>
+
+            <strong>{pendingMedia.file.name}</strong>
+
+            <span>
+              {(pendingMedia.file.size / 1024 / 1024).toFixed(2)} MB
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="media-preview-actions">
+        <button
+          className="secondary"
+          type="button"
+          onClick={cancelMedia}
+          disabled={uploading}
+        >
+          Close
+        </button>
+
+        <button
+          className="primary"
+          type="button"
+          onClick={() => void confirmMedia()}
+          disabled={uploading}
+        >
+          {uploading ? (
+            <>
+              <span className="button-loader" />
+              Sending…
+            </>
+          ) : (
+            'Send'
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       {replyingTo && <div className="reply-composer-bar"><div><span className="eyebrow">REPLYING TO</span><strong>{replyingTo.fromMe ? 'Your message' : chat.name}</strong><span>{replyingTo.text || replyingTo.mediaName || 'Attachment'}</span></div><button className="icon-btn" onClick={onCancelReply} aria-label="Cancel reply">×</button></div>}
       <div className="composer">
         <input ref={fileRef} hidden type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" onChange={(e) => { const f = e.target.files?.[0]; if (f) void chooseFile(f); e.currentTarget.value = '' }} />

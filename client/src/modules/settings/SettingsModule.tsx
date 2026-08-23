@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../components/ui/Icon'
 import { ImageCropper } from '../../components/ui/ImageCropper'
 import { api, assetUrl, getSession, saveSession, type User } from '../../lib'
@@ -113,7 +113,45 @@ function SecurityPanel({ onClose }: { onClose: () => void }) {
   return <div className="card"><div className="table-head"><strong>Security</strong><button className="icon-btn" onClick={onClose}><Icon name="more" /></button></div><input type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} placeholder="Current password" /><input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="New password (min 8 characters)" style={{marginTop:8}} />{error&&<div className="notice" style={{marginTop:12}}><strong>Could not change password</strong><span>{error}</span></div>}{saved&&!error&&<p style={{marginTop:12}}>Password updated.</p>}<button className="primary" disabled={saving||!currentPassword||newPassword.length<8} onClick={save} style={{marginTop:12}}>{saving?'Updating…':'Update password'}</button></div>
 }
 
+function PreferencesPanel() {
+  const [theme, setTheme] = useState<'light'|'dark'>('light')
+  const [language, setLanguage] = useState('en')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    void api.getUserPreferences().then(r => {
+      const p = r.data.preferences || {}
+      setTheme(p.theme === 'dark' ? 'dark' : 'light')
+      setLanguage(p.language || 'en')
+      document.documentElement.dataset.userTheme = p.theme === 'dark' ? 'dark' : 'light'
+      document.documentElement.lang = p.language || 'en'
+    }).catch(() => undefined)
+  }, [])
+
+  async function save(nextTheme = theme, nextLanguage = language) {
+    setSaving(true); setSaved(false)
+    try {
+      await api.updateUserPreferences({ theme: nextTheme, language: nextLanguage })
+      document.documentElement.dataset.userTheme = nextTheme
+      document.documentElement.lang = nextLanguage
+      setSaved(true)
+    } finally { setSaving(false) }
+  }
+
+  return <div className="card user-preferences-panel">
+    <div className="table-head"><div><strong>My preferences</strong><small>These settings affect only your account.</small></div></div>
+    <div className="preference-row">
+      <div><strong>Theme</strong><span>Choose light or dark mode for your account.</span></div>
+      <button type="button" className={theme === 'dark' ? 'toggle on' : 'toggle'} aria-pressed={theme === 'dark'} onClick={() => { const next=theme==='dark'?'light':'dark'; setTheme(next); void save(next, language) }}><span /></button>
+    </div>
+    <label style={{display:'grid',gap:6,marginTop:16}}><span>My language</span><select value={language} onChange={e=>setLanguage(e.target.value)}><option value="en">English</option><option value="hi">हिन्दी (Hindi)</option></select></label>
+    <button className="primary" disabled={saving} onClick={() => void save()} style={{marginTop:12}}>{saving ? 'Saving…' : 'Save language'}</button>
+    {saved && <small style={{display:'block',marginTop:8}}>Preferences saved.</small>}
+  </div>
+}
+
 export function SettingsModule() {
-  const [panel, setPanel] = useState<'Profile'|'Security'|null>(null)
-  return <div className="page-module"><div className="page-header"><div><h2>Settings</h2><p>Control your FedChat experience.</p></div></div>{panel==='Profile'&&<ProfilePanel onClose={()=>setPanel(null)} />}{panel==='Security'&&<SecurityPanel onClose={()=>setPanel(null)} />}{!panel&&<div className="settings-list"><button className="setting-row" onClick={()=>setPanel('Profile')}><div className="setting-icon"><Icon name="users"/></div><div><strong>Profile</strong><span>Profile photo, cover banner, bio, name and username</span></div><Icon name="arrow"/></button><button className="setting-row" onClick={()=>setPanel('Security')}><div className="setting-icon"><Icon name="settings"/></div><div><strong>Security</strong><span>Change your password</span></div><Icon name="arrow"/></button>{other.map(([a,b])=><button className="setting-row" key={a} disabled title="Not available yet"><div className="setting-icon"><Icon name={a==='Notifications'?'bell':a==='Privacy'?'users':'settings'}/></div><div><strong>{a}</strong><span>{b} — coming soon</span></div><Icon name="arrow"/></button>)}</div>}</div>
+  const [panel, setPanel] = useState<'Profile'|'Security'|'Preferences'|null>(null)
+  return <div className="page-module"><div className="page-header"><div><h2>Settings</h2><p>Control your FedChat experience.</p></div></div>{panel==='Profile'&&<ProfilePanel onClose={()=>setPanel(null)} />}{panel==='Security'&&<SecurityPanel onClose={()=>setPanel(null)} />}{panel==='Preferences'&&<PreferencesPanel />}{!panel&&<div className="settings-list"><button className="setting-row" onClick={()=>setPanel('Profile')}><div className="setting-icon"><Icon name="users"/></div><div><strong>Profile</strong><span>Profile photo, cover banner, bio, name and username</span></div><Icon name="arrow"/></button><button className="setting-row" onClick={()=>setPanel('Security')}><div className="setting-icon"><Icon name="settings"/></div><div><strong>Security</strong><span>Change your password</span></div><Icon name="arrow"/></button><button className="setting-row" onClick={()=>setPanel('Preferences')}><div className="setting-icon"><Icon name="settings"/></div><div><strong>Appearance & language</strong><span>Personal light/dark theme and your language</span></div><Icon name="arrow"/></button>{other.map(([a,b])=><button className="setting-row" key={a} disabled title="Not available yet"><div className="setting-icon"><Icon name={a==='Notifications'?'bell':a==='Privacy'?'users':'settings'}/></div><div><strong>{a}</strong><span>{b} — coming soon</span></div><Icon name="arrow"/></button>)}</div>}</div>
 }

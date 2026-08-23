@@ -13,6 +13,11 @@ const DEFAULTS: Record<string, unknown> = {
   "site.maintenanceMode": false,
   "site.primaryColor": "#168a57",
   "site.accentColor": "#1da968",
+  "site.logoUrl": "",
+  "site.faviconUrl": "",
+  "site.language": "en",
+  "site.alertLanguage": "en",
+  "site.theme": "light",
 };
 
 router.get("/", async (_req, res) => {

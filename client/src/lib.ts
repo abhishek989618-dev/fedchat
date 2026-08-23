@@ -150,10 +150,17 @@ export type NotificationItem = {
 
 
 export function getSession(): Session | null {
-  try { return JSON.parse(localStorage.getItem('fedchat_session') || 'null') } catch { return null }
+  try {
+    const raw = localStorage.getItem('fedchat_session') || sessionStorage.getItem('fedchat_session')
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
 }
-export function saveSession(session: Session) { localStorage.setItem('fedchat_session', JSON.stringify(session)) }
-export function clearSession() { localStorage.removeItem('fedchat_session') }
+export function saveSession(session: Session) { localStorage.setItem('fedchat_session', JSON.stringify(session)); sessionStorage.removeItem('fedchat_session') }
+export function saveRememberedSession(session: Session, remember: boolean) {
+  if (remember) { localStorage.setItem('fedchat_session', JSON.stringify(session)); sessionStorage.removeItem('fedchat_session') }
+  else { sessionStorage.setItem('fedchat_session', JSON.stringify(session)); localStorage.removeItem('fedchat_session') }
+}
+export function clearSession() { localStorage.removeItem('fedchat_session'); sessionStorage.removeItem('fedchat_session') }
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
   const session = getSession()
@@ -165,7 +172,9 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
     const refreshRes = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ refreshToken: session.refreshToken }) })
     if (refreshRes.ok) {
       const payload = await refreshRes.json()
-      saveSession({ ...session, ...payload.data })
+      const refreshed = { ...session, ...payload.data }
+       if (localStorage.getItem('fedchat_session')) saveSession(refreshed)
+       else sessionStorage.setItem('fedchat_session', JSON.stringify(refreshed))
       return request<T>(path, options, false)
     }
     clearSession()
@@ -184,9 +193,11 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
 
 
 export const api = {
-  login: (email: string, password: string) => request<{success:boolean;data:Session}>('/auth/login', {method:'POST', body:JSON.stringify({email,password})}),
+  login: (identifier: string, password: string) => request<{success:boolean;data:Session}>('/auth/login', {method:'POST', body:JSON.stringify({identifier,password})}),
   register: (data: Record<string, unknown>) => request<{success:boolean}>('/auth/register', {method:'POST', body:JSON.stringify(data)}),
   me: () => request<{success:boolean;data:{user:User}}>('/auth/me'),
+  getUserPreferences: () => request<{success:boolean;data:{preferences:{theme?: 'light'|'dark'|null; language?: string}}}>('/users/me/preferences'),
+  updateUserPreferences: (data: {theme?: 'light'|'dark'; language?: string}) => request<{success:boolean;data:{preferences:any}}>('/users/me/preferences', {method:'PATCH', body:JSON.stringify(data)}),
   rooms: () => request<{success:boolean;data:{rooms:any[]}}>('/rooms'),
   uploadMedia: async (file: File) => {
     const session = getSession()

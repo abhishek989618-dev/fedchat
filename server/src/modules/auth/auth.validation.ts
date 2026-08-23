@@ -40,18 +40,9 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-
-  password: z
-    .string()
-    .min(1)
+  identifier: z.string().min(1).max(100).transform((value) => value.trim()),
+  password: z.string().min(1)
 });
-
-export type RegisterInput =
-  z.infer<typeof registerSchema>;
 
 export type LoginInput =
   z.infer<typeof loginSchema>;

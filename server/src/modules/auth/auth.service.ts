@@ -85,7 +85,10 @@ const user = await this.repository.createUser({
   }
 
   async login(input: LoginInput) {
-    const user = await this.repository.findUserByEmail(input.email);
+    const identifier = input.identifier.trim();
+    const user = identifier.includes("@")
+      ? await this.repository.findUserByEmail(identifier.toLowerCase())
+      : await this.repository.findUserByPhone(normalizePhone(identifier) || identifier);
 
     // Always run bcrypt.compare, even when no user was found, using
     // a fixed dummy hash in that case. This keeps response time the

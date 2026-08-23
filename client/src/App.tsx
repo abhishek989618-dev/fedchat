@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import './App.css'
+import './premium-ui.css'
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
+import { MobileNav } from './components/layout/MobileNav'
 import { AdminModule } from './modules/admin/AdminModule'
 import { ChatModule } from './modules/chat/ChatModule'
 import { CommunitiesModule } from './modules/communities/CommunitiesModule'
@@ -14,7 +17,7 @@ import { StatusModule } from './modules/status/StatusModule'
 import { SubscriptionsModule } from './modules/subscriptions/SubscriptionsModule'
 import { AuthModule } from './modules/auth/AuthModule'
 import type { AdminSection, Section } from './types/app'
-import { clearSession, createSocket, getSession } from './lib'
+import { api, clearSession, createSocket, getSession } from './lib'
 import type { Socket } from 'socket.io-client'
 import { useApplySiteSettings, useSiteSettings } from './hooks/useSiteSettings'
 
@@ -35,6 +38,19 @@ function App() {
   const [socket, setSocket] = useState<Socket | null>(null)
   const [requestedRoomId, setRequestedRoomId] = useState('')
   const [requestedGroupId, setRequestedGroupId] = useState('')
+
+  useEffect(() => {
+    if (!session) { document.documentElement.removeAttribute('data-user-theme'); return }
+    void api.getUserPreferences().then(r => {
+      const p = r.data.preferences || {}
+      if (p.theme === 'dark' || p.theme === 'light') {
+        document.documentElement.dataset.userTheme = p.theme
+      } else {
+        document.documentElement.removeAttribute('data-user-theme')
+      }
+      document.documentElement.lang = p.language || siteSettings.language || 'en'
+    }).catch(() => undefined)
+  }, [session, siteSettings.language])
 
   useEffect(() => {
     const onOpenRoom = (event: Event) => {
@@ -74,20 +90,20 @@ function App() {
   const canAdmin = session?.user?.role === 'platform_admin'
   const visibleSection = canAdmin || active !== 'admin' ? active : 'chats'
   const title = titles[visibleSection]
-  const content = useMemo(() => {
-    switch (visibleSection) {
-      case 'chats': return <ChatModule socket={socket} initialRoomId={requestedRoomId} />
-      case 'contacts': return <ContactsModule />
-      case 'status': return <StatusModule />
-      case 'groups': return <GroupsModule initialGroupId={requestedGroupId} onNavigateToPlans={() => setActive('subscriptions')} />
-      case 'communities': return <CommunitiesModule onNavigateToPlans={() => setActive('subscriptions')} />
-      case 'notifications': return <NotificationsModule socket={socket} />
-      case 'subscriptions': return <SubscriptionsModule />
-      case 'settings': return <SettingsModule />
-      case 'support': return <SupportModule siteSettings={siteSettings} />
-      case 'admin': return canAdmin ? <AdminModule initialSection={adminSection} onSectionChange={setAdminSection} /> : <ChatModule socket={socket} />
-    }
-  }, [visibleSection, canAdmin, socket, requestedRoomId, requestedGroupId, siteSettings])
+  let content: ReactNode
+  switch (visibleSection) {
+    case 'chats': content = <ChatModule socket={socket} initialRoomId={requestedRoomId} />; break
+    case 'contacts': content = <ContactsModule />; break
+    case 'status': content = <StatusModule />; break
+    case 'groups': content = <GroupsModule initialGroupId={requestedGroupId} onNavigateToPlans={() => setActive('subscriptions')} />; break
+    case 'communities': content = <CommunitiesModule onNavigateToPlans={() => setActive('subscriptions')} />; break
+    case 'notifications': content = <NotificationsModule socket={socket} />; break
+    case 'subscriptions': content = <SubscriptionsModule />; break
+    case 'settings': content = <SettingsModule />; break
+    case 'support': content = <SupportModule siteSettings={siteSettings} />; break
+    case 'admin': content = canAdmin ? <AdminModule initialSection={adminSection} onSectionChange={setAdminSection} /> : <ChatModule socket={socket} />; break
+    default: content = <ChatModule socket={socket} initialRoomId={requestedRoomId} />
+  }
 
   if (!session) return <AuthModule onLogin={() => setSession(getSession())} />
 
@@ -103,6 +119,7 @@ function App() {
         canAdmin={canAdmin}
         user={session.user}
         brandName={siteSettings.name}
+         logoUrl={siteSettings.logoUrl}
         adminSection={adminSection}
         onAdminSectionChange={(section) => { setAdminSection(section); setActive('admin'); setMobileOpen(false) }}
       />
@@ -123,6 +140,7 @@ function App() {
           <button className="connection-logout" onClick={() => { clearSession(); setSession(null) }}>Sign out</button>
         </div>
         <div className="content-area">{content}</div>
+        <MobileNav active={visibleSection === 'admin' ? 'settings' : visibleSection} onChange={(section) => { setActive(section); setMobileOpen(false) }} />
       </main>
     </div>
   )

@@ -1,5 +1,7 @@
 // Kept as a lightweight compatibility check for older deployment instructions.
 // db:deploy now performs the safe repair automatically via db-repair.mjs.
+
+import "dotenv/config";
 import pg from "pg";
 const { Pool } = pg;
 if (!process.env.DATABASE_URL) {
