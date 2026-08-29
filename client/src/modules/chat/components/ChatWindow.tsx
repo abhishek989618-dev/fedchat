@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
 import type { Chat, Message } from '../../../types/app'
 import type { Socket } from 'socket.io-client'
 import { Icon } from '../../../components/ui/Icon'
@@ -9,6 +8,7 @@ import { MessageComposer } from './MessageComposer'
 
 type Props = {
   chat: Chat
+  language?: string
   onSend: (text: string) => void
   onSendMedia?: (file: File, messageType: 'audio' | 'image' | 'video' | 'file') => Promise<void>
   readOnly?: boolean
@@ -28,19 +28,14 @@ type Props = {
   loading?: boolean
 }
 
-export function ChatWindow({ chat, onSend, onSendMedia, readOnly = false, socket, onEdit, onDelete, onReact, onUnreact, onReply, onForward, replyingTo, onCancelReply, onBack, onRefresh, onManageGroup, onDeleteSelected, loading = false }: Props) {
-  const [text, setText] = useState('')
+export function ChatWindow({ chat, language = 'en', onSend, onSendMedia, readOnly = false, onEdit, onDelete, onReact, onUnreact, onReply, onForward, replyingTo, onCancelReply, onBack, onRefresh, onManageGroup, onDeleteSelected, loading = false }: Props) {
   const [typing, setTyping] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
   const [findText, setFindText] = useState('')
   const [infoOpen, setInfoOpen] = useState(false)
-  const [recording, setRecording] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [pendingMedia, setPendingMedia] = useState<{file: File; type: 'audio'|'image'|'video'|'file'; preview: string} | null>(null)
   const [selectedMessages, setSelectedMessages] = useState<string[]>([])
-  const fileRef = useRef<HTMLInputElement>(null)
-  const recorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
   const typingTimer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
@@ -53,32 +48,23 @@ export function ChatWindow({ chat, onSend, onSendMedia, readOnly = false, socket
     return () => { window.removeEventListener('fedchat:typing', handleTypingEvent); window.clearTimeout(typingTimer.current) }
   }, [chat.id])
 
-  useEffect(() => { setText(''); setFindOpen(false); setFindText(''); setInfoOpen(false); setSelectedMessages([]) }, [chat.id])
+  useEffect(() => {
+  const timer = window.setTimeout(() => {
+    setFindOpen(false)
+    setFindText('')
+    setInfoOpen(false)
+    setSelectedMessages([])
+  }, 0)
 
-  const send = () => {
-    const value = text.trim()
-    if (!value) return
-    onSend(value); setText(''); socket?.emit('typing:stop', { roomId: chat.id })
+  return () => {
+    window.clearTimeout(timer)
   }
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send() } }
-  const handleType = (value: string) => {
-    setText(value)
-    if (!socket) return
-    if (!value.trim()) { socket.emit('typing:stop', { roomId: chat.id }); return }
-    socket.emit('typing:start', { roomId: chat.id }); window.clearTimeout(typingTimer.current); typingTimer.current = window.setTimeout(() => socket.emit('typing:stop', { roomId: chat.id }), 1100)
-  }
+}, [chat.id])
   const matched = findText.trim() ? chat.messages.filter((message) => message.text.toLowerCase().includes(findText.trim().toLowerCase())).length : 0
   const jumpToMatch = () => {
     const needle = findText.trim().toLowerCase(); if (!needle) return
     const node = [...document.querySelectorAll('.chat-window .bubble p')].find((element) => element.textContent?.toLowerCase().includes(needle))
     node?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-  const chooseFile = (file: File) => {
-    if (!onSendMedia || readOnly) return
-    const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'file'
-    const preview = type === 'image' || type === 'video' ? URL.createObjectURL(file) : ''
-    setPendingMedia({ file, type, preview })
   }
   const confirmMedia = async () => {
   if (!pendingMedia || !onSendMedia || uploading) return
@@ -108,19 +94,6 @@ const cancelMedia = () => {
 
   setPendingMedia(null)
 }
-  const toggleRecording = async () => {
-    if (readOnly || !onSendMedia) return
-    if (recording && recorderRef.current) { recorderRef.current.stop(); return }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'
-      const recorder = new MediaRecorder(stream, { mimeType })
-      chunksRef.current = []
-      recorder.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data) }
-      recorder.onstop = async () => { stream.getTracks().forEach((t) => t.stop()); setRecording(false); const blob = new Blob(chunksRef.current, { type: mimeType }); if (!blob.size) return; setUploading(true); try { await onSendMedia(new File([blob], `voice-note-${Date.now()}.webm`, { type: mimeType }), 'audio') } finally { setUploading(false) } }
-      recorder.start(); recorderRef.current = recorder; setRecording(true)
-    } catch { window.alert('Microphone permission is required for voice notes.') }
-  }
 
   const infoMembers = (chat.members ?? []).filter((member) => member.userId)
   const selectionActive = selectedMessages.length > 0
@@ -244,15 +217,9 @@ const cancelMedia = () => {
   </div>
 )}
       {replyingTo && <div className="reply-composer-bar"><div><span className="eyebrow">REPLYING TO</span><strong>{replyingTo.fromMe ? 'Your message' : chat.name}</strong><span>{replyingTo.text || replyingTo.mediaName || 'Attachment'}</span></div><button className="icon-btn" onClick={onCancelReply} aria-label="Cancel reply">×</button></div>}
-      {/* <div className="composer">
-        <input ref={fileRef} hidden type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" onChange={(e) => { const f = e.target.files?.[0]; if (f) void chooseFile(f); e.currentTarget.value = '' }} />
-        <button className="icon-btn composer-action" type="button" aria-label="Attach file" onClick={() => fileRef.current?.click()} disabled={uploading}><Icon name="plus" /></button>
-        <input value={text} onChange={(e) => handleType(e.target.value)} onKeyDown={handleKeyDown} placeholder={replyingTo ? 'Write a reply…' : `Message ${chat.name}`} aria-label={`Message ${chat.name}`} maxLength={4000} disabled={uploading} />
-        <button className={recording ? 'voice-btn recording' : 'voice-btn'} type="button" aria-label={text.trim() ? 'Send message' : recording ? 'Stop recording' : 'Voice message'} onClick={text.trim() ? send : toggleRecording} disabled={uploading}><Icon name={text.trim() ? 'send' : recording ? 'square' : 'mic'} /></button>
-      </div> */}
       <MessageComposer
   recipientName={chat.name}
-  // language={language}
+  language={language}
   readOnly={readOnly}
   onSend={onSend}
   onSendMedia={onSendMedia}

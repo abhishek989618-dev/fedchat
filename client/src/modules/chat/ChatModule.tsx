@@ -6,7 +6,6 @@ import { ChatList } from './components/ChatList'
 import { ChatWindow } from './components/ChatWindow'
 import './chat.css'
 import {
-  getChatTranslations,
   normalizeChatLanguage,
 } from './chat-i18n'
 
@@ -600,9 +599,7 @@ useEffect(() => {
   }
 }, [])
 
-const t =
-  getChatTranslations(language)
-  /*
+/*
    * -------------------------------------------------------
    * NOTICE AUTO-DISMISS
    * -------------------------------------------------------
@@ -3027,6 +3024,7 @@ const t =
             chat={selectedChat}
             socket={socket}
             onSend={send}
+            language={language}
             onSendMedia={
               sendMedia
             }

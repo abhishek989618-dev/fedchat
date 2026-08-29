@@ -15,7 +15,7 @@ import {
   useState,
 } from 'react'
 
-import { api, assetUrl, getSession } from '../../lib'
+import { api, getSession } from '../../lib'
 
 import './communities.css'
 
@@ -61,19 +61,6 @@ function initials(name: string) {
   )
 }
 
-function safeAssetUrl(
-  value?: string | null,
-) {
-  if (!value) {
-    return ''
-  }
-
-  try {
-    return assetUrl(value)
-  } catch {
-    return value
-  }
-}
 
 function formatAnnouncementDate(
   value: string,

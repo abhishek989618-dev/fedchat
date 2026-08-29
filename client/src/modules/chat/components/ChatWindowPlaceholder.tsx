@@ -14,7 +14,6 @@ type ChatWindowPlaceholderProps = {
 }
 
 export function ChatWindowPlaceholder({
-  conversationId,
   onBack,
 }: ChatWindowPlaceholderProps) {
   return (

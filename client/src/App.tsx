@@ -367,23 +367,6 @@ const [showAuth, setShowAuth] =
    * -------------------------------------------------------
    */
 
-  const handleNavigate = (
-    nav: AppNavKey,
-  ) => {
-    const nextSection =
-      mapNavToSection(nav)
-
-    if (
-      nextSection === 'admin' &&
-      !canAdmin
-    ) {
-      setActive('chats')
-      return
-    }
-
-    setActive(nextSection)
-  }
-
   /*
    * -------------------------------------------------------
    * RENDER
@@ -403,7 +386,6 @@ const [showAuth, setShowAuth] =
     }
 
     setActive(nextSection)
-    setMobileOpen(false)
   }}
   siteSettings={{
     name: siteSettings.name,

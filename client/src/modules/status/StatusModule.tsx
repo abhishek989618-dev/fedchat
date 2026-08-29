@@ -2,15 +2,11 @@ import {
   Bell,
   ChevronRight,
   Clock3,
-  Image as ImageIcon,
-  MoreVertical,
-  Play,
   Plus,
   Search,
   Trash2,
   Upload,
   Users,
-  Video,
   X,
 } from 'lucide-react'
 import {
@@ -118,15 +114,6 @@ function formatTime(
   )
 }
 
-function mediaUrl(
-  value?: string | null,
-) {
-  if (!value) {
-    return ''
-  }
-
-  return assetUrl(value)
-}
 
 function normalizeStatusMedia(
   value?: string | null,
@@ -331,12 +318,7 @@ const [openStatusId, setOpenStatusId] =
     setCreating,
   ] = useState(false)
 
-  const [
-  openStoryUserId,
-  setOpenStoryUserId,
-] = useState<string | null>(
-  null,
-)
+  const [, setOpenStoryUserId] = useState<string | null>(null)
 
 const [
   openStoryIndex,
@@ -442,7 +424,6 @@ const [
 
 function groupStatusesByUser(
   items: StatusItem[],
-  currentUserId?: string,
 ): StatusUserGroup[] {
   const groups = new Map<
     string,
@@ -608,7 +589,6 @@ const groupedOtherStatuses =
     () =>
       groupStatusesByUser(
         otherStatuses,
-        String(me?.id || ''),
       ),
     [otherStatuses, me?.id],
   )
@@ -1617,75 +1597,60 @@ async function previousStory() {
               </div>
             ) : (
               <div className="status-list viewed">
-                {viewedStatusGroups.map(
-                  (status) => {
-                    const avatar =
-                      avatarUrl(
-                        status.avatar,
-                      )
+                {viewedStatusGroups.map((group) => {
+                  const avatar = avatarUrl(group.avatar)
+                  const latest = group.statuses[group.statuses.length - 1]
 
-                    return (
-                      <button
-                        type="button"
-                        key={
-                          status.id
-                        }
-                        className="status-row viewed"
-                        onClick={() =>
-                          void open(
-                            status,
-                          )
-                        }
-                      >
-                        <div className="status-avatar-wrap">
-                          <div className="status-avatar">
-                            {avatar ? (
-                              <img
-                                src={
-                                  avatar
-                                }
-                                alt=""
-                              />
-                            ) : (
-                              initials(
-                                status.first_name,
-                                status.last_name,
-                              )
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="status-row-copy">
-                          <strong>
-                            {
-                              status.first_name
-                            }{' '}
-                            {
-                              status.last_name
-                            }
-                          </strong>
-
-                          <span>
-                            {status.content ||
-                              'Status update'}
-                          </span>
-                        </div>
-
-                        <time>
-                          {formatTime(
-                            status.created_at,
+                  return (
+                    <button
+                      type="button"
+                      key={group.userId}
+                      className="status-row viewed"
+                      onClick={() =>
+                        void openStory(
+                          group.userId,
+                          group.statuses,
+                          0,
+                        )
+                      }
+                    >
+                      <div className="status-avatar-wrap">
+                        <div className="status-avatar">
+                          {avatar ? (
+                            <img src={avatar} alt="" />
+                          ) : (
+                            initials(
+                              group.firstName,
+                              group.lastName,
+                            )
                           )}
-                        </time>
+                        </div>
+                      </div>
 
-                        <ChevronRight
-                          size={15}
-                          strokeWidth={1.8}
-                          className="status-row-chevron"
-                        />
-                      </button>
-                    )
-                  },
-                )}
+                      <div className="status-row-copy">
+                        <strong>
+                          {`${group.firstName} ${group.lastName}`.trim() || group.username || 'User'}
+                        </strong>
+
+                        <span>
+                          {latest?.content || 'Status update'}
+                        </span>
+                      </div>
+
+                      <time>
+                        {formatTime(
+                          group.latestCreatedAt,
+                        )}
+                      </time>
+
+                      <ChevronRight
+                        size={15}
+                        strokeWidth={1.8}
+                        className="status-row-chevron"
+                      />
+                    </button>
+                  )
+                })}
               </div>
             )}
           </section>
