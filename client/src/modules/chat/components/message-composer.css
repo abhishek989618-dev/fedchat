@@ -1,0 +1,584 @@
+.fedchat-composer-wrap {
+  width: 100%;
+  padding: 10px 15px 14px;
+
+  border-top: 1px solid #e0e8e3;
+
+  background: rgba(
+    255,
+    255,
+    255,
+    0.96
+  );
+
+  backdrop-filter: blur(14px);
+}
+
+.fedchat-composer {
+  min-height: 50px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 4px;
+
+  padding: 5px;
+
+  border: 1px solid #d8e3de;
+  border-radius: 15px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 5px 20px
+      rgba(22, 67, 45, 0.045),
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.9);
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.fedchat-composer:focus-within {
+  border-color: #80c6a3;
+
+  box-shadow:
+    0 0 0 3px
+      rgba(43, 178, 111, 0.08),
+    0 8px 24px
+      rgba(22, 67, 45, 0.05);
+}
+
+.fedchat-composer.is-readonly {
+  opacity: 0.7;
+}
+
+.fedchat-composer-icon,
+.fedchat-emoji-button,
+.fedchat-microphone,
+.fedchat-send,
+.fedchat-record-cancel,
+.fedchat-record-stop {
+  width: 36px;
+  height: 36px;
+
+  flex: 0 0 36px;
+
+  display: grid;
+  place-items: center;
+
+  border: 0;
+  border-radius: 10px;
+
+  cursor: pointer;
+}
+
+.fedchat-composer-icon,
+.fedchat-emoji-button {
+  color: #718078;
+  background: transparent;
+}
+
+.fedchat-composer-icon:hover:not(:disabled),
+.fedchat-emoji-button:hover:not(:disabled) {
+  color: #178957;
+  background: #eef7f2;
+}
+
+.fedchat-composer-icon:disabled,
+.fedchat-emoji-button:disabled,
+.fedchat-microphone:disabled,
+.fedchat-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.fedchat-composer-input {
+  min-width: 0;
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+
+  gap: 4px;
+}
+
+.fedchat-composer-input input {
+  width: 100%;
+  min-width: 0;
+
+  height: 36px;
+
+  padding: 0 4px;
+
+  border: 0;
+  outline: 0;
+
+  color: #24332b;
+
+  background: transparent;
+
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.fedchat-composer-input input::placeholder {
+  color: #9aa6a0;
+}
+
+.fedchat-emoji-button {
+  width: 31px;
+  height: 31px;
+  flex-basis: 31px;
+}
+
+.fedchat-microphone {
+  color: #168957;
+
+  background: #eaf8f0;
+}
+
+.fedchat-microphone:hover:not(:disabled) {
+  color: #ffffff;
+  background: #178957;
+}
+
+.fedchat-send {
+  color: #ffffff;
+  background:
+    linear-gradient(
+      135deg,
+      #188f59,
+      #22aa6b
+    );
+
+  box-shadow:
+    0 6px 15px
+      rgba(24, 143, 89, 0.18);
+}
+
+.fedchat-send:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 8px 18px
+      rgba(24, 143, 89, 0.23);
+}
+
+/* =========================================================
+   RECORDING
+   ========================================================= */
+
+.fedchat-composer.recording {
+  min-height: 50px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 5px;
+
+  border: 1px solid #d8e3de;
+  border-radius: 15px;
+
+  background: #ffffff;
+}
+
+.fedchat-record-cancel {
+  color: #7a867f;
+  background: #f1f5f3;
+}
+
+.fedchat-record-cancel:hover {
+  color: #c44a53;
+  background: #fff0f1;
+}
+
+.fedchat-recording-body {
+  min-width: 0;
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+}
+
+.fedchat-recording-dot {
+  width: 9px;
+  height: 9px;
+
+  flex: 0 0 9px;
+
+  border-radius: 50%;
+
+  background: #df4d58;
+
+  box-shadow:
+    0 0 0 5px
+      rgba(223, 77, 88, 0.09);
+
+  animation:
+    fedchat-recording-pulse
+    1.2s ease-in-out infinite;
+}
+
+.fedchat-recording-wave {
+  min-width: 0;
+  flex: 1;
+
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 3px;
+}
+
+.fedchat-recording-wave i {
+  width: 3px;
+
+  border-radius: 999px;
+
+  background: #43b97e;
+
+  animation:
+    fedchat-recording-wave
+    900ms
+    ease-in-out
+    infinite
+    alternate;
+}
+
+.fedchat-recording-wave i:nth-child(1) {
+  height: 8px;
+}
+
+.fedchat-recording-wave i:nth-child(2) {
+  height: 14px;
+  animation-delay: 80ms;
+}
+
+.fedchat-recording-wave i:nth-child(3) {
+  height: 22px;
+  animation-delay: 160ms;
+}
+
+.fedchat-recording-wave i:nth-child(4) {
+  height: 14px;
+  animation-delay: 240ms;
+}
+
+.fedchat-recording-wave i:nth-child(5) {
+  height: 20px;
+  animation-delay: 320ms;
+}
+
+.fedchat-recording-wave i:nth-child(6) {
+  height: 10px;
+  animation-delay: 400ms;
+}
+
+.fedchat-recording-wave i:nth-child(7) {
+  height: 18px;
+  animation-delay: 480ms;
+}
+
+.fedchat-recording-wave i:nth-child(8) {
+  height: 12px;
+  animation-delay: 560ms;
+}
+
+.fedchat-recording-wave i:nth-child(9) {
+  height: 21px;
+  animation-delay: 640ms;
+}
+
+.fedchat-recording-wave i:nth-child(10) {
+  height: 13px;
+  animation-delay: 720ms;
+}
+
+.fedchat-recording-wave i:nth-child(11) {
+  height: 8px;
+  animation-delay: 800ms;
+}
+
+.fedchat-recording-time {
+  flex: 0 0 auto;
+
+  min-width: 39px;
+
+  color: #45534b;
+
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.fedchat-record-stop {
+  color: #ffffff;
+  background: #178d58;
+}
+
+.fedchat-record-stop:hover {
+  background: #117b4c;
+}
+
+.fedchat-composer-error {
+  margin-bottom: 6px;
+
+  padding: 7px 9px;
+
+  border: 1px solid #f1d4d7;
+  border-radius: 8px;
+
+  color: #a4444d;
+  background: #fff5f6;
+
+  font-size: 8px;
+}
+
+/* =========================================================
+   DARK THEME
+   ========================================================= */
+
+html[data-user-theme='dark']
+.fedchat-composer-wrap {
+  border-top-color: #20322a;
+
+  background: rgba(
+    11,
+    20,
+    17,
+    0.96
+  );
+}
+
+html[data-user-theme='dark']
+.fedchat-composer {
+  border-color: #2a3c33;
+
+  background: #101b17;
+
+  box-shadow:
+    0 6px 22px
+      rgba(0, 0, 0, 0.2);
+}
+
+html[data-user-theme='dark']
+.fedchat-composer:focus-within {
+  border-color: #4b8f6d;
+
+  box-shadow:
+    0 0 0 3px
+      rgba(63, 123, 91, 0.14);
+}
+
+html[data-user-theme='dark']
+.fedchat-composer-input input {
+  color: #edf5f1;
+}
+
+html[data-user-theme='dark']
+.fedchat-composer-input input::placeholder {
+  color: #74837b;
+}
+
+html[data-user-theme='dark']
+.fedchat-composer-icon,
+html[data-user-theme='dark']
+.fedchat-emoji-button {
+  color: #9aa9a2;
+}
+
+html[data-user-theme='dark']
+.fedchat-composer-icon:hover:not(:disabled),
+html[data-user-theme='dark']
+.fedchat-emoji-button:hover:not(:disabled) {
+  color: #66d29a;
+  background: #172720;
+}
+
+html[data-user-theme='dark']
+.fedchat-microphone {
+  color: #70d6a0;
+  background: #163124;
+}
+
+html[data-user-theme='dark']
+.fedchat-recording-body {
+  color: #dce9e3;
+}
+
+html[data-user-theme='dark']
+.fedchat-recording-time {
+  color: #c7d5ce;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .fedchat-composer-wrap {
+    padding:
+      8px
+      10px
+      calc(
+        8px +
+        env(safe-area-inset-bottom)
+      );
+  }
+
+  .fedchat-composer {
+    min-height: 49px;
+
+    border-radius: 14px;
+  }
+
+  .fedchat-composer-icon,
+  .fedchat-microphone,
+  .fedchat-send {
+    width: 37px;
+    height: 37px;
+
+    flex-basis: 37px;
+  }
+
+  .fedchat-composer-input input {
+    height: 37px;
+
+    font-size: 12px;
+  }
+
+  .fedchat-image-action {
+    display: grid;
+  }
+
+  .fedchat-emoji-button {
+    width: 31px;
+    height: 31px;
+    flex-basis: 31px;
+  }
+
+  .fedchat-composer.recording {
+    min-height: 49px;
+  }
+
+  .fedchat-recording-wave {
+    gap: 2px;
+  }
+
+  .fedchat-recording-wave i {
+    width: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fedchat-recording-dot,
+  .fedchat-recording-wave i,
+  .fedchat-send {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes fedchat-recording-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes fedchat-recording-wave {
+  from {
+    transform: scaleY(0.65);
+  }
+
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.fedchat-emoji-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.fedchat-emoji-picker {
+  position: absolute;
+  z-index: 50;
+
+  right: 0;
+  bottom: calc(100% + 10px);
+
+  width: 250px;
+
+  display: grid;
+  grid-template-columns:
+    repeat(8, 1fr);
+
+  gap: 4px;
+
+  padding: 9px;
+
+  border: 1px solid #dce6e1;
+  border-radius: 13px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 18px 45px
+      rgba(20, 57, 40, 0.14);
+}
+
+.fedchat-emoji-item {
+  width: 27px;
+  height: 27px;
+
+  display: grid;
+  place-items: center;
+
+  border: 0;
+  border-radius: 7px;
+
+  background: transparent;
+
+  cursor: pointer;
+
+  font-size: 17px;
+
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.fedchat-emoji-item:hover {
+  background: #eef7f2;
+  transform: scale(1.08);
+}
+
+@media (max-width: 768px) {
+  .fedchat-emoji-picker {
+    right: -5px;
+    bottom: calc(100% + 9px);
+
+    width: min(
+      280px,
+      calc(100vw - 24px)
+    );
+
+    grid-template-columns:
+      repeat(7, 1fr);
+
+    padding: 10px;
+  }
+
+  .fedchat-emoji-item {
+    width: 31px;
+    height: 31px;
+
+    font-size: 18px;
+  }
+}

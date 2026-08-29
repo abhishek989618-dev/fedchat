@@ -1208,3 +1208,33 @@ html[data-platform-theme="dark"]:not([data-user-theme]) .composer{background:#18
     flex: 1;
   }
 }
+
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+    height: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: calc(
+      100dvh - 68px
+    );
+  }
+
+  .app-content {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+

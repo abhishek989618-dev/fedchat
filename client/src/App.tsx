@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
 import './App.css'
 import './premium-ui.css'
-import { Sidebar } from './components/layout/Sidebar'
-import { TopBar } from './components/layout/TopBar'
-import { MobileNav } from './components/layout/MobileNav'
+import './redesign-phase1.css'
+
+
+import {
+  AppShell,
+  type AppNavKey,
+} from './components/layout/AppShell'
+
+import { AuthModule } from './modules/auth/AuthModule'
 import { AdminModule } from './modules/admin/AdminModule'
 import { ChatModule } from './modules/chat/ChatModule'
 import { CommunitiesModule } from './modules/communities/CommunitiesModule'
@@ -12,137 +17,597 @@ import { ContactsModule } from './modules/contacts/ContactsModule'
 import { GroupsModule } from './modules/groups/GroupsModule'
 import { NotificationsModule } from './modules/notifications/NotificationsModule'
 import { SettingsModule } from './modules/settings/SettingsModule'
-import { SupportModule } from './modules/support/SupportModule'
 import { StatusModule } from './modules/status/StatusModule'
 import { SubscriptionsModule } from './modules/subscriptions/SubscriptionsModule'
-import { AuthModule } from './modules/auth/AuthModule'
-import type { AdminSection, Section } from './types/app'
-import { api, clearSession, createSocket, getSession } from './lib'
-import type { Socket } from 'socket.io-client'
-import { useApplySiteSettings, useSiteSettings } from './hooks/useSiteSettings'
+import { SupportModule } from './modules/support/SupportModule'
+import { PublicHomePage } from './pages/PublicHomePage'
 
-const titles: Record<Section, [string, string]> = {
-  chats: ['Chats', 'Real-time conversations'], contacts: ['Contacts', 'People you can message'], status: ['Status', 'Share updates with your contacts'],
-  groups: ['Groups', 'Paid-plan group management'], communities: ['Communities', 'Announcements and multiple groups'], notifications: ['Notifications', 'Messages and platform alerts'],
-  subscriptions: ['Plans & Billing', 'Manual subscription approval'], settings: ['Settings', 'Account, privacy and chat settings'], support: ['Help & Legal', 'How to use FedChat, contact support and review policies'], admin: ['Admin Console', 'Platform administration']
+import type {
+  AdminSection,
+  Section,
+} from './types/app'
+
+import {
+  api,
+  clearSession,
+  createSocket,
+  getSession,
+} from './lib'
+
+import type { Socket } from 'socket.io-client'
+
+import {
+  useApplySiteSettings,
+  useSiteSettings,
+} from './hooks/useSiteSettings'
+
+function mapSectionToNav(
+  section: Section,
+): AppNavKey {
+  switch (section) {
+    case 'chats':
+      return 'chats'
+
+    case 'contacts':
+      return 'contacts'
+
+    case 'status':
+      return 'status'
+
+    case 'groups':
+      return 'groups'
+
+    case 'communities':
+      return 'communities'
+
+    case 'notifications':
+      return 'notifications'
+
+    case 'subscriptions':
+      return 'billing'
+
+    case 'settings':
+      return 'settings'
+
+    case 'support':
+      return 'help'
+
+    case 'admin':
+      return 'admin'
+
+    default:
+      return 'chats'
+  }
+}
+
+function mapNavToSection(
+  nav: AppNavKey,
+): Section {
+  switch (nav) {
+    case 'chats':
+      return 'chats'
+
+    case 'contacts':
+      return 'contacts'
+
+    case 'status':
+      return 'status'
+
+    case 'groups':
+      return 'groups'
+
+    case 'communities':
+      return 'communities'
+
+    case 'notifications':
+      return 'notifications'
+
+    case 'billing':
+      return 'subscriptions'
+
+    case 'settings':
+      return 'settings'
+
+    case 'help':
+      return 'support'
+
+    case 'admin':
+      return 'admin'
+
+    default:
+      return 'chats'
+  }
 }
 
 function App() {
-  const { settings: siteSettings } = useSiteSettings()
+  const { settings: siteSettings } =
+    useSiteSettings()
+
   useApplySiteSettings(siteSettings)
-  const [session, setSession] = useState(getSession())
-  const [active, setActive] = useState<Section>('chats')
-  const [adminSection, setAdminSection] = useState<AdminSection>('overview')
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [connected, setConnected] = useState(false)
-  const [socket, setSocket] = useState<Socket | null>(null)
-  const [requestedRoomId, setRequestedRoomId] = useState('')
-  const [requestedGroupId, setRequestedGroupId] = useState('')
+
+  const [session, setSession] =
+    useState(getSession())
+
+  const [active, setActive] =
+    useState<Section>('chats')
+
+  const [adminSection, setAdminSection] =
+    useState<AdminSection>('overview')
+
+  const [socket, setSocket] =
+    useState<Socket | null>(null)
+
+  const [requestedRoomId, setRequestedRoomId] =
+    useState('')
+
+  const [requestedGroupId, setRequestedGroupId] =
+    useState('')
+const [showAuth, setShowAuth] =
+  useState(false)
+  /*
+   * -------------------------------------------------------
+   * USER PREFERENCES
+   * -------------------------------------------------------
+   */
 
   useEffect(() => {
-    if (!session) { document.documentElement.removeAttribute('data-user-theme'); return }
-    void api.getUserPreferences().then(r => {
-      const p = r.data.preferences || {}
-      if (p.theme === 'dark' || p.theme === 'light') {
-        document.documentElement.dataset.userTheme = p.theme
-      } else {
-        document.documentElement.removeAttribute('data-user-theme')
+    if (!session) {
+      document.documentElement.removeAttribute(
+        'data-user-theme',
+      )
+
+      document.documentElement.lang =
+        siteSettings.language || 'en'
+
+      return
+    }
+
+    let cancelled = false
+
+    void api
+      .getUserPreferences()
+      .then((response) => {
+        if (cancelled) {
+          return
+        }
+
+        const preferences =
+          response.data.preferences || {}
+
+        if (
+          preferences.theme === 'dark' ||
+          preferences.theme === 'light'
+        ) {
+          document.documentElement.dataset.userTheme =
+            preferences.theme
+        } else {
+          document.documentElement.removeAttribute(
+            'data-user-theme',
+          )
+        }
+
+        document.documentElement.lang =
+          preferences.language ||
+          siteSettings.language ||
+          'en'
+      })
+      .catch(() => {
+        if (!cancelled) {
+          document.documentElement.lang =
+            siteSettings.language || 'en'
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    session,
+    siteSettings.language,
+  ])
+
+  /*
+   * -------------------------------------------------------
+   * GLOBAL OPEN-ROOM / MANAGE-GROUP EVENTS
+   * -------------------------------------------------------
+   */
+
+  useEffect(() => {
+    const handleOpenRoom = (
+      event: Event,
+    ) => {
+      const roomId = String(
+        (
+          event as CustomEvent<{
+            roomId?: string
+          }>
+        ).detail?.roomId ?? '',
+      )
+
+      if (!roomId) {
+        return
       }
-      document.documentElement.lang = p.language || siteSettings.language || 'en'
-    }).catch(() => undefined)
-  }, [session, siteSettings.language])
 
-  useEffect(() => {
-    const onOpenRoom = (event: Event) => {
-      const roomId = String((event as CustomEvent).detail?.roomId ?? '')
-      if (roomId) setRequestedRoomId(roomId)
+      setRequestedRoomId(roomId)
       setActive('chats')
     }
-    const onManageGroup = (event: Event) => {
-      const roomId = String((event as CustomEvent).detail?.roomId ?? '')
-      if (!roomId) return
+
+    const handleManageGroup = (
+      event: Event,
+    ) => {
+      const roomId = String(
+        (
+          event as CustomEvent<{
+            roomId?: string
+          }>
+        ).detail?.roomId ?? '',
+      )
+
+      if (!roomId) {
+        return
+      }
+
       setRequestedGroupId(roomId)
       setActive('groups')
     }
-    window.addEventListener('fedchat:open-room', onOpenRoom)
-    window.addEventListener('fedchat:manage-group', onManageGroup)
+
+    window.addEventListener(
+      'fedchat:open-room',
+      handleOpenRoom,
+    )
+
+    window.addEventListener(
+      'fedchat:manage-group',
+      handleManageGroup,
+    )
+
     return () => {
-      window.removeEventListener('fedchat:open-room', onOpenRoom)
-      window.removeEventListener('fedchat:manage-group', onManageGroup)
+      window.removeEventListener(
+        'fedchat:open-room',
+        handleOpenRoom,
+      )
+
+      window.removeEventListener(
+        'fedchat:manage-group',
+        handleManageGroup,
+      )
     }
   }, [])
 
-  // Single Socket.IO connection for the whole session — passed down to
-  // whichever module needs it (chat, presence, notifications, etc.)
-  // instead of each module opening its own connection.
+  /*
+   * -------------------------------------------------------
+   * SINGLE SOCKET CONNECTION
+   * -------------------------------------------------------
+   */
+
   useEffect(() => {
-    if (!session) { setSocket(null); return }
-    const s = createSocket()
-    if (!s) return
-    setSocket(s)
-    const onConnect = () => setConnected(true)
-    const onDisconnect = () => setConnected(false)
-    s.on('connect', onConnect)
-    s.on('disconnect', onDisconnect)
-    return () => { s.off('connect', onConnect); s.off('disconnect', onDisconnect); s.disconnect(); setSocket(null) }
+    if (!session) {
+      setSocket(null)
+      return
+    }
+
+    const socketInstance =
+      createSocket()
+
+    if (!socketInstance) {
+      setSocket(null)
+      return
+    }
+
+    setSocket(socketInstance)
+
+    return () => {
+      socketInstance.disconnect()
+      setSocket(null)
+    }
   }, [session])
 
-  const canAdmin = session?.user?.role === 'platform_admin'
-  const visibleSection = canAdmin || active !== 'admin' ? active : 'chats'
-  const title = titles[visibleSection]
-  let content: ReactNode
-  switch (visibleSection) {
-    case 'chats': content = <ChatModule socket={socket} initialRoomId={requestedRoomId} />; break
-    case 'contacts': content = <ContactsModule />; break
-    case 'status': content = <StatusModule />; break
-    case 'groups': content = <GroupsModule initialGroupId={requestedGroupId} onNavigateToPlans={() => setActive('subscriptions')} />; break
-    case 'communities': content = <CommunitiesModule onNavigateToPlans={() => setActive('subscriptions')} />; break
-    case 'notifications': content = <NotificationsModule socket={socket} />; break
-    case 'subscriptions': content = <SubscriptionsModule />; break
-    case 'settings': content = <SettingsModule />; break
-    case 'support': content = <SupportModule siteSettings={siteSettings} />; break
-    case 'admin': content = canAdmin ? <AdminModule initialSection={adminSection} onSectionChange={setAdminSection} /> : <ChatModule socket={socket} />; break
-    default: content = <ChatModule socket={socket} initialRoomId={requestedRoomId} />
+  /*
+   * -------------------------------------------------------
+   * AUTH
+   * -------------------------------------------------------
+   */
+
+  if (!session) {
+  if (!showAuth) {
+    return (
+      <PublicHomePage
+        onLogin={() =>
+          setShowAuth(true)
+        }
+      />
+    )
   }
 
-  if (!session) return <AuthModule onLogin={() => setSession(getSession())} />
-
   return (
-    <div className="app-shell" style={{ ['--site-primary' as any]: siteSettings.primaryColor, ['--site-accent' as any]: siteSettings.accentColor }}>
-      {siteSettings.maintenanceMode && session.user.role !== 'platform_admin' && (
-        <div className="maintenance-banner" role="status"><strong>{siteSettings.name} is in maintenance mode</strong><span>Some features may be temporarily unavailable.</span></div>
-      )}
-      <Sidebar
-        active={visibleSection}
-        onChange={(section) => { setActive(section); setMobileOpen(false) }}
-        open={mobileOpen}
-        canAdmin={canAdmin}
-        user={session.user}
-        brandName={siteSettings.name}
-         logoUrl={siteSettings.logoUrl}
-        adminSection={adminSection}
-        onAdminSectionChange={(section) => { setAdminSection(section); setActive('admin'); setMobileOpen(false) }}
-      />
-      {mobileOpen && <button className="sidebar-overlay" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
-      <main className="main">
-        <TopBar title={title[0]} subtitle={title[1]} onMenu={() => setMobileOpen(v => !v)} />
-        {session.user.role === 'guest' && (
-          <div className="notice" style={{ margin: '0 16px' }}>
-            <strong>Guest account</strong>
-            <span>You have limited access and this expires {session.user.guestExpiresAt ? `on ${new Date(session.user.guestExpiresAt).toLocaleString()}` : 'soon'}. Create a free account to keep your access.</span>
-            <button onClick={() => { clearSession(); setSession(null) }}>Create account</button>
-          </div>
-        )}
-        <div className="connection-bar">
-          <span className={connected ? 'status-dot online' : 'status-dot'} />
-          <span>{connected ? 'Connected securely' : 'Connecting to realtime…'}</span>
-          <span className="connection-bar-spacer" />
-          <button className="connection-logout" onClick={() => { clearSession(); setSession(null) }}>Sign out</button>
-        </div>
-        <div className="content-area">{content}</div>
-        <MobileNav active={visibleSection === 'admin' ? 'settings' : visibleSection} onChange={(section) => { setActive(section); setMobileOpen(false) }} />
-      </main>
-    </div>
+    <AuthModule
+      onLogin={() =>
+        setSession(
+          getSession(),
+        )
+      }
+    />
   )
 }
+  /*
+   * -------------------------------------------------------
+   * ACCESS
+   * -------------------------------------------------------
+   */
+
+  const canAdmin =
+    session.user?.role ===
+    'platform_admin'
+
+  const visibleSection: Section =
+    active === 'admin' && !canAdmin
+      ? 'chats'
+      : active
+
+  const displayName =
+    [
+      session.user?.firstName,
+      session.user?.lastName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    session.user?.username ||
+    'FedChat User'
+
+  const username =
+    session.user?.username || undefined
+
+  const avatar =
+    session.user?.avatar || null
+
+  /*
+   * -------------------------------------------------------
+   * NAVIGATION
+   * -------------------------------------------------------
+   */
+
+  const handleNavigate = (
+    nav: AppNavKey,
+  ) => {
+    const nextSection =
+      mapNavToSection(nav)
+
+    if (
+      nextSection === 'admin' &&
+      !canAdmin
+    ) {
+      setActive('chats')
+      return
+    }
+
+    setActive(nextSection)
+  }
+
+  /*
+   * -------------------------------------------------------
+   * RENDER
+   * -------------------------------------------------------
+   */
+
+  return (
+    <AppShell
+   activeNav={mapSectionToNav(visibleSection)}
+  isPlatformAdmin={canAdmin}
+  onNavigate={(nav) => {
+    const nextSection = mapNavToSection(nav)
+
+    if (nextSection === 'admin' && !canAdmin) {
+      setActive('chats')
+      return
+    }
+
+    setActive(nextSection)
+    setMobileOpen(false)
+  }}
+  siteSettings={{
+    name: siteSettings.name,
+    tagline: siteSettings.tagline,
+    logoUrl: siteSettings.logoUrl
+      ? siteSettings.logoUrl
+      : null,
+  }}
+  onLogout={() => {
+    clearSession()
+    setSession(null)
+    setActive('chats')
+    setRequestedRoomId('')
+    setRequestedGroupId('')
+  }}
+      unreadNotifications={0}
+      unreadChats={0}
+      user={{
+        name: displayName,
+        username,
+        avatar,
+        status: 'online',
+      }}
+    >
+      {/* ================================================
+          MAINTENANCE NOTICE
+          ================================================ */}
+
+      {siteSettings.maintenanceMode &&
+        session.user?.role !==
+          'platform_admin' && (
+          <div
+            className="maintenance-banner"
+            role="status"
+          >
+            <strong>
+              {siteSettings.name} is in
+              maintenance mode
+            </strong>
+
+            <span>
+              Some features may be
+              temporarily unavailable.
+            </span>
+          </div>
+        )}
+
+      {/* ================================================
+          GUEST NOTICE
+          ================================================ */}
+
+      {session.user?.role === 'guest' && (
+        <div className="notice">
+          <strong>
+            Guest account
+          </strong>
+
+          <span>
+            You have limited access and
+            this expires{' '}
+            {session.user
+              ?.guestExpiresAt
+              ? new Date(
+                  session.user.guestExpiresAt,
+                ).toLocaleString()
+              : 'soon'}
+            .
+          </span>
+
+          <button
+            type="button"
+            onClick={() => {
+              clearSession()
+              setSession(null)
+            }}
+          >
+            Create account
+          </button>
+        </div>
+      )}
+
+      {/* ================================================
+          CHATS
+          ================================================ */}
+
+      {visibleSection === 'chats' && (
+        <ChatModule
+          socket={socket}
+          initialRoomId={
+            requestedRoomId
+          }
+        />
+      )}
+
+      {/* ================================================
+          CONTACTS
+          ================================================ */}
+
+      {visibleSection === 'contacts' && (
+        <ContactsModule />
+      )}
+
+      {/* ================================================
+          STATUS
+          ================================================ */}
+
+      {visibleSection === 'status' && (
+  <StatusModule
+    onBack={() => {
+      setActive('chats')
+    }}
+  />
+)}
+
+      {/* ================================================
+          GROUPS
+          ================================================ */}
+
+      {visibleSection === 'groups' && (
+        <GroupsModule
+          initialGroupId={
+            requestedGroupId
+          }
+          onNavigateToPlans={() =>
+            setActive(
+              'subscriptions',
+            )
+          }
+        />
+      )}
+
+      {/* ================================================
+          COMMUNITIES
+          ================================================ */}
+
+      {visibleSection ===
+        'communities' && (
+        <CommunitiesModule
+          onNavigateToPlans={() =>
+            setActive(
+              'subscriptions',
+            )
+          }
+        />
+      )}
+
+      {/* ================================================
+          NOTIFICATIONS
+          ================================================ */}
+
+      {visibleSection ===
+        'notifications' && (
+        <NotificationsModule
+          socket={socket}
+        />
+      )}
+
+      {/* ================================================
+          SUBSCRIPTIONS
+          ================================================ */}
+
+      {visibleSection ===
+        'subscriptions' && (
+        <SubscriptionsModule />
+      )}
+
+      {/* ================================================
+          SETTINGS
+          ================================================ */}
+
+      {visibleSection ===
+        'settings' && (
+        <SettingsModule />
+      )}
+
+      {/* ================================================
+          SUPPORT
+          ================================================ */}
+
+      {visibleSection === 'support' && (
+        <SupportModule
+          siteSettings={
+            siteSettings
+          }
+        />
+      )}
+
+      {/* ================================================
+          ADMIN
+          ================================================ */}
+
+      {visibleSection === 'admin' &&
+        canAdmin && (
+          <AdminModule
+            initialSection={
+              adminSection
+            }
+            onSectionChange={
+              setAdminSection
+            }
+          />
+        )}
+    </AppShell>
+  )
+}
+
 export default App

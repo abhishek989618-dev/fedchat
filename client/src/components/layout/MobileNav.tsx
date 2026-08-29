@@ -3,10 +3,10 @@ import { Icon } from '../ui/Icon'
 
 const items: [Section, string, string][] = [
   ['chats', 'Chats', 'chat'],
-  ['contacts', 'People', 'users'],
+  ['contacts', 'Contacts', 'users'],
   ['status', 'Status', 'status'],
-  ['notifications', 'Alerts', 'bell'],
-  ['settings', 'Settings', 'settings'],
+  ['notifications', 'Notifications', 'bell'],
+  ['settings', 'Profile', 'settings'],
 ]
 
 export function MobileNav({ active, onChange }: { active: Section; onChange: (section: Section) => void }) {

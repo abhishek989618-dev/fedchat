@@ -52,7 +52,7 @@ export function Sidebar({
         <span className="brand-mark">{logoUrl ? <img src={assetUrl(logoUrl)} alt="" /> : brandName.slice(0, 1).toUpperCase()}</span>
         <div className="brand-copy">
           <strong>{brandName}</strong>
-          <span>Connected workspace</span>
+          <span>Private conversations. Live communication.</span>
         </div>
       </div>
 

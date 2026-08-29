@@ -5,6 +5,7 @@ import type { Socket } from 'socket.io-client'
 import { Icon } from '../../../components/ui/Icon'
 import { assetUrl } from '../../../lib'
 import { MessageBubble } from './MessageBubble'
+import { MessageComposer } from './MessageComposer'
 
 type Props = {
   chat: Chat
@@ -243,12 +244,19 @@ const cancelMedia = () => {
   </div>
 )}
       {replyingTo && <div className="reply-composer-bar"><div><span className="eyebrow">REPLYING TO</span><strong>{replyingTo.fromMe ? 'Your message' : chat.name}</strong><span>{replyingTo.text || replyingTo.mediaName || 'Attachment'}</span></div><button className="icon-btn" onClick={onCancelReply} aria-label="Cancel reply">×</button></div>}
-      <div className="composer">
+      {/* <div className="composer">
         <input ref={fileRef} hidden type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" onChange={(e) => { const f = e.target.files?.[0]; if (f) void chooseFile(f); e.currentTarget.value = '' }} />
         <button className="icon-btn composer-action" type="button" aria-label="Attach file" onClick={() => fileRef.current?.click()} disabled={uploading}><Icon name="plus" /></button>
         <input value={text} onChange={(e) => handleType(e.target.value)} onKeyDown={handleKeyDown} placeholder={replyingTo ? 'Write a reply…' : `Message ${chat.name}`} aria-label={`Message ${chat.name}`} maxLength={4000} disabled={uploading} />
         <button className={recording ? 'voice-btn recording' : 'voice-btn'} type="button" aria-label={text.trim() ? 'Send message' : recording ? 'Stop recording' : 'Voice message'} onClick={text.trim() ? send : toggleRecording} disabled={uploading}><Icon name={text.trim() ? 'send' : recording ? 'square' : 'mic'} /></button>
-      </div>
+      </div> */}
+      <MessageComposer
+  recipientName={chat.name}
+  // language={language}
+  readOnly={readOnly}
+  onSend={onSend}
+  onSendMedia={onSendMedia}
+/>
     </> : <div className="composer readonly-composer"><span>Guest mode is read-only. You can view messages and media.</span></div>}
   </section>
 }

@@ -38,6 +38,7 @@ export const registerSchema = z.object({
   .optional(),
     
 });
+export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
   identifier: z.string().min(1).max(100).transform((value) => value.trim()),

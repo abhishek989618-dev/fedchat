@@ -58,7 +58,7 @@ export function ChatList({ items, selected, onSelect, onNewChat, onDeleteChats, 
       <strong>{selectedChats.length} selected</strong>
       <button className="danger-icon-btn" type="button" onClick={removeSelected} aria-label="Delete selected chats" title="Delete selected chats"><Icon name="trash" /></button>
     </div> : <div className="list-head">
-      <div className="search"><Icon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conversations" aria-label="Search conversations" /></div>
+      <div className="chat-list-search"><Icon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conversations" aria-label="Search conversations" /></div>
       <button className="round-btn" type="button" onClick={onNewChat} aria-label="New conversation" title="New conversation"><Icon name="plus" /></button>
     </div>}
 
