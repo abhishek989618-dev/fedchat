@@ -540,6 +540,12 @@ export function ChatModule({
   const [showNewChat, setShowNewChat] =
     useState(false)
 
+  const [showAddToGroup, setShowAddToGroup] = useState(false)
+  const [availableGroups, setAvailableGroups] = useState<AnyRecord[]>([])
+  const [groupForAdd, setGroupForAdd] = useState('')
+  const [addToGroupBusy, setAddToGroupBusy] = useState(false)
+  const [addToGroupMessage, setAddToGroupMessage] = useState('')
+
   const [userSearch, setUserSearch] =
     useState('')
 
@@ -2586,6 +2592,39 @@ useEffect(() => {
       }
     }
 
+  async function openAddToGroup() {
+    if (!selectedChat || selectedChat.type !== 'DIRECT') return
+    setShowAddToGroup(true)
+    setGroupForAdd('')
+    setAddToGroupMessage('')
+    try {
+      const response = await api.groups()
+      setAvailableGroups(Array.isArray(response?.data?.groups) ? response.data.groups as AnyRecord[] : [])
+    } catch (reason) {
+      setAddToGroupMessage(reason instanceof Error ? reason.message : 'Unable to load your groups.')
+      setAvailableGroups([])
+    }
+  }
+
+  async function addDirectPartnerToGroup() {
+    if (!selectedChat || !groupForAdd) return
+    const partner = (selectedChat.members ?? []).find(member => String(member.userId) !== currentUserId())
+    if (!partner?.userId) {
+      setAddToGroupMessage('Could not identify the other user in this conversation. Refresh the chat and try again.')
+      return
+    }
+    setAddToGroupBusy(true)
+    setAddToGroupMessage('')
+    try {
+      await api.addGroupMember(groupForAdd, partner.userId)
+      setAddToGroupMessage('User added to the group successfully.')
+    } catch (reason) {
+      setAddToGroupMessage(reason instanceof Error ? reason.message : 'Unable to add this user to the group.')
+    } finally {
+      setAddToGroupBusy(false)
+    }
+  }
+
   /*
    * -------------------------------------------------------
    * REFRESH SELECTED
@@ -3036,12 +3075,36 @@ useEffect(() => {
         </div>
       )}
 
+      {showAddToGroup && (
+        <div className="chat-modal-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setShowAddToGroup(false)
+        }}>
+          <section className="new-chat-panel" role="dialog" aria-modal="true" aria-label="Add user to a group">
+            <header className="new-chat-header">
+              <div><span className="eyebrow">GROUP MEMBERS</span><h2>Add user to a group</h2><p>The person from this direct chat will be added to the group you select.</p></div>
+              <button type="button" className="icon-btn" aria-label="Close" onClick={() => setShowAddToGroup(false)}>×</button>
+            </header>
+            <label className="new-chat-search-label" htmlFor="fedchat-group-select">Choose a group</label>
+            <select id="fedchat-group-select" value={groupForAdd} onChange={(event) => setGroupForAdd(event.target.value)}>
+              <option value="">Select one of your groups</option>
+              {availableGroups.map((group) => <option key={String(group.id)} value={String(group.id)}>{String(group.name || 'Untitled group')}</option>)}
+            </select>
+            {addToGroupMessage && <p role="status" className="new-chat-message">{addToGroupMessage}</p>}
+            <div className="new-chat-actions">
+              <button type="button" className="secondary" onClick={() => setShowAddToGroup(false)}>Cancel</button>
+              <button type="button" className="primary" disabled={!groupForAdd || addToGroupBusy} onClick={() => void addDirectPartnerToGroup()}>{addToGroupBusy ? 'Adding…' : 'Add user'}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {selectedChat ? (
         <main className="chat-window">
           <ChatWindow
             chat={selectedChat}
             socket={socket}
             onSend={send}
+            onAddToGroup={openAddToGroup}
             language={language}
             onSendMedia={
               sendMedia
