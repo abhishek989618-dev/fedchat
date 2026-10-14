@@ -2599,7 +2599,7 @@ useEffect(() => {
     setAddToGroupMessage('')
     try {
       const response = await api.groups()
-      setAvailableGroups(Array.isArray(response?.data?.groups) ? response.data.groups as AnyRecord[] : [])
+      setAvailableGroups(Array.isArray(response?.data?.groups) ? (response.data.groups as AnyRecord[]).filter(group => String(group.createdBy?.id ?? group.createdById ?? '') === currentUserId()) : [])
     } catch (reason) {
       setAddToGroupMessage(reason instanceof Error ? reason.message : 'Unable to load your groups.')
       setAvailableGroups([])
