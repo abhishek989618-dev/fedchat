@@ -510,7 +510,7 @@ export function AppShell({
                   />
 
                   <span>
-                    Log out
+                    Logout
                   </span>
                 </button>
               </div>
@@ -702,7 +702,7 @@ export function AppShell({
                     />
 
                     <span>
-                      Log out
+                      Logout
                     </span>
                   </button>
                 </div>
