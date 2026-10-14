@@ -25,16 +25,8 @@ export const groupsService = {
     if (!userId) throw new Error("User ID is required");
     const owner = await rawPool.query(`SELECT 1 FROM rooms WHERE id=$1 AND created_by_id=$2`, [roomId, requestedById]);
     if (!owner.rowCount) throw new Error("Only the group owner can add members");
-    const targetSub = await rawPool.query(`SELECT 1 FROM subscriptions s WHERE s."userId"=$1 AND s."isActive"=true AND s."startsAt"<=NOW() AND s."expiresAt">NOW() AND s."accessLevel"='FULL' LIMIT 1`, [userId]);
-    if (!targetSub.rowCount) throw new Error("Only users with an active FULL paid subscription can be added to a group");
-    const subscription = await subscriptionService.ensurePaidFeature(requestedById);
-    const maxMembers = subscription.plan?.maxMembersPerGroup;
-    if (typeof maxMembers === "number") {
-      const current = await groupsRepository.countMembers(roomId);
-      if (current >= maxMembers) {
-        throw new Error(`Your plan allows up to ${maxMembers} member(s) per group. Upgrade your plan to add more.`);
-      }
-    }
+    // A subscription is required to create a group, not to invite or add users.
+    // Group membership remains available to free users; ownership is still enforced above.
     const member = await groupsRepository.addMember(roomId, userId);
     await createUserNotification(userId, { title: "Added to a group", message: "You were added to a FedChat group.", type: "group_added" }).catch(() => undefined);
     return member;
