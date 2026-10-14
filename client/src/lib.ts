@@ -233,6 +233,8 @@ export const api = {
       subscription: {
         id?: string
         status?: string
+        startsAt?: string
+        expiresAt?: string
         plan?: Plan
       } | null
     }

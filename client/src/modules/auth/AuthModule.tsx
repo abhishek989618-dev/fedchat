@@ -162,7 +162,7 @@ export function AuthModule({ onLogin }: { onLogin: () => void }) {
       }))
 
       setMode('login')
-      setSuccess('Your account was created successfully. Please sign in.')
+      setSuccess('Your account was created successfully. Please log in.')
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -282,7 +282,7 @@ export function AuthModule({ onLogin }: { onLogin: () => void }) {
 
               <p>
                 {mode === 'login'
-                  ? 'Sign in to continue to your conversations.'
+                  ? 'Login to continue to your conversations.'
                   : 'Create your account and start connecting with your people.'}
               </p>
             </div>
@@ -295,7 +295,7 @@ export function AuthModule({ onLogin }: { onLogin: () => void }) {
                 className={mode === 'login' ? 'active' : ''}
                 onClick={() => changeMode('login')}
               >
-                Sign in
+                Login
               </button>
 
               <button
@@ -538,7 +538,7 @@ export function AuthModule({ onLogin }: { onLogin: () => void }) {
                   {loading
                     ? 'Please wait…'
                     : mode === 'login'
-                      ? 'Sign in'
+                      ? 'Login'
                       : 'Create account'}
                 </span>
 
@@ -566,7 +566,7 @@ export function AuthModule({ onLogin }: { onLogin: () => void }) {
                 >
                   {mode === 'login'
                     ? 'Create account'
-                    : 'Sign in'}
+                    : 'Login'}
                 </button>
               ) : null}
             </p>

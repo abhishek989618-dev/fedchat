@@ -769,3 +769,81 @@
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Accessibility pass: readable desktop typography and dependable dark-mode contrast. */
+@media (min-width: 761px) {
+  .app-nav-item { font-size: 14px !important; }
+  .app-nav-label { font-size: 11px !important; }
+  .app-account-name, .app-account-menu, .app-topbar-account-menu { font-size: 14px !important; }
+  .chat-title strong { font-size: 14px !important; }
+  .chat-title time, .chat-preview span { font-size: 12px !important; }
+  .search input, .composer input:not([type=file]) { font-size: 14px !important; }
+  .conversation-title strong { font-size: 16px !important; }
+  .conversation-title span { font-size: 12px !important; }
+  .bubble p { font-size: 15px !important; line-height: 1.55 !important; }
+  .message-time { font-size: 11px !important; }
+  .conversation-start strong { font-size: 16px !important; }
+  .conversation-start span { font-size: 13px !important; }
+  .chat-list-hint { font-size: 11px !important; }
+  .topbar h1 { font-size: 20px !important; }
+}
+html[data-user-theme="dark"] .chat-window,
+html[data-user-theme="dark"] .messages {
+  color: #f4f7f5 !important;
+}
+html[data-user-theme="dark"] .chat-window {
+  background: #111a16 !important;
+}
+html[data-user-theme="dark"] .conversation-head,
+html[data-user-theme="dark"] .conversation-info-panel,
+html[data-user-theme="dark"] .conversation-search,
+html[data-user-theme="dark"] .composer {
+  background: #17231d !important;
+  color: #f4f7f5 !important;
+  border-color: #304238 !important;
+}
+html[data-user-theme="dark"] .messages {
+  background: linear-gradient(145deg, #101a15 0%, #18271f 100%) !important;
+}
+html[data-user-theme="dark"] .conversation-title strong,
+html[data-user-theme="dark"] .conversation-info-header strong,
+html[data-user-theme="dark"] .profile-info-card strong,
+html[data-user-theme="dark"] .group-member-row strong,
+html[data-user-theme="dark"] .bubble p,
+html[data-user-theme="dark"] .conversation-start strong {
+  color: #f5f8f6 !important;
+}
+html[data-user-theme="dark"] .conversation-title span,
+html[data-user-theme="dark"] .conversation-info-header span,
+html[data-user-theme="dark"] .group-member-row small,
+html[data-user-theme="dark"] .profile-info-card span,
+html[data-user-theme="dark"] .conversation-start span {
+  color: #c0cec6 !important;
+}
+html[data-user-theme="dark"] .bubble {
+  background: #24352b !important;
+  border-color: #3a5143 !important;
+}
+html[data-user-theme="dark"] .message-row.mine .bubble {
+  background: #174b32 !important;
+  border-color: #286b48 !important;
+}
+html[data-user-theme="dark"] .message-time {
+  color: #c0cec6 !important;
+}
+html[data-user-theme="dark"] .composer input:not([type=file]),
+html[data-user-theme="dark"] .conversation-search input,
+html[data-user-theme="dark"] .search input {
+  color: #f5f8f6 !important;
+  background: #101a15 !important;
+  border-color: #3a5143 !important;
+}
+html[data-user-theme="dark"] .composer input::placeholder,
+html[data-user-theme="dark"] .search input::placeholder {
+  color: #b4c2ba !important;
+}
+html[data-user-theme="dark"] .conversation-start {
+  background: #1a2921 !important;
+  border-color: #3a5143 !important;
+}

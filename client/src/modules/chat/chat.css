@@ -1145,3 +1145,24 @@ html[data-user-theme='dark']
 .chat-list-search input::placeholder {
   color: #72827a;
 }
+
+/* Direct-chat group invitation modal */
+.new-chat-panel select#fedchat-group-select {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--fd-border, #dfe8e3);
+  border-radius: 10px;
+  background: var(--fd-surface, #fff);
+  color: var(--fd-text, #15211c);
+  font: inherit;
+}
+.new-chat-search-label { display: block; margin-top: 16px; font-size: 13px; font-weight: 700; }
+.new-chat-message { margin: 10px 0; color: var(--fd-text, #15211c); font-size: 13px; }
+html[data-user-theme="dark"] .new-chat-panel select#fedchat-group-select {
+  background: #101a15;
+  border-color: #3a5143;
+  color: #f5f8f6;
+}

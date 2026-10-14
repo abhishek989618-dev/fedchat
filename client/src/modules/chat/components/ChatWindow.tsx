@@ -24,11 +24,12 @@ type Props = {
   onBack?: () => void
   onRefresh?: () => void
   onManageGroup?: () => void
+  onAddToGroup?: () => void
   onDeleteSelected?: (ids: string[]) => void
   loading?: boolean
 }
 
-export function ChatWindow({ chat, language = 'en', onSend, onSendMedia, readOnly = false, onEdit, onDelete, onReact, onUnreact, onReply, onForward, replyingTo, onCancelReply, onBack, onRefresh, onManageGroup, onDeleteSelected, loading = false }: Props) {
+export function ChatWindow({ chat, language = 'en', onSend, onSendMedia, readOnly = false, onEdit, onDelete, onReact, onUnreact, onReply, onForward, replyingTo, onCancelReply, onBack, onRefresh, onManageGroup, onAddToGroup, onDeleteSelected, loading = false }: Props) {
   const [typing, setTyping] = useState(false)
   const [findOpen, setFindOpen] = useState(false)
   const [findText, setFindText] = useState('')
@@ -127,7 +128,7 @@ const cancelMedia = () => {
       <div className="conversation-info-header"><div><span className="eyebrow">{chat.type === 'GROUP' ? 'GROUP INFO' : 'PROFILE'}</span><strong>{chat.name}</strong><span>{chat.type === 'GROUP' ? (chat.description || 'Group conversation') : 'Direct conversation'}</span></div><button className="icon-btn" type="button" onClick={() => setInfoOpen(false)}>×</button></div>
       {chat.type === 'GROUP' && <div className="group-info-hero">{chat.bannerUrl && <img src={assetUrl(chat.bannerUrl)} alt="" />}<div className="group-info-identity"><div className="avatar avatar-xl">{chat.avatarUrl ? <img src={assetUrl(chat.avatarUrl)} alt="" /> : chat.avatar}</div><div><strong>{chat.name}</strong><span>{chat.description || 'Group conversation'}</span></div></div></div>}
       {chat.type === 'GROUP' ? <div className="group-member-list">{infoMembers.map((member) => { const user = member.user; const label = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || user?.username || 'Member'; return <div className="group-member-row" key={member.userId}><div className="avatar">{label.slice(0,2).toUpperCase()}</div><div><strong>{label}</strong><small>@{user?.username ?? 'user'}</small></div>{member.isAdmin ? <span className="admin-badge">Admin</span> : null}</div> })}</div> : <div className="profile-info-card"><div className="avatar avatar-xl">{chat.avatarUrl ? <img src={assetUrl(chat.avatarUrl)} alt="" /> : chat.avatar}</div><strong>{chat.name}</strong><span>{chat.online ? 'Online now' : 'Offline'}</span></div>}
-      <div className="conversation-info-actions">{chat.type === 'GROUP' && onManageGroup ? <button className="primary" type="button" onClick={onManageGroup}>Manage group</button> : null}<button className="secondary" type="button" onClick={onRefresh}>Refresh</button></div>
+      <div className="conversation-info-actions">{chat.type === 'GROUP' && onManageGroup ? <button className="primary" type="button" onClick={onManageGroup}>Manage group</button> : null}{chat.type === 'DIRECT' && onAddToGroup ? <button className="primary" type="button" onClick={onAddToGroup}>Add user to a group</button> : null}<button className="secondary" type="button" onClick={onRefresh}>Refresh</button></div>
     </div>}
 
     {selectionActive && <div className="message-selection-toolbar"><button className="icon-btn" onClick={clearMessageSelection} aria-label="Cancel message selection">×</button><strong>{selectedMessages.length} selected</strong><button className="danger-icon-btn" onClick={deleteSelectedMessages} aria-label="Delete selected messages" title="Delete selected messages"><Icon name="trash" /></button></div>}

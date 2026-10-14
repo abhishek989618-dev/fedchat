@@ -99,6 +99,33 @@ function formatPrice(
   )
 }
 
+function formatPlanDuration(days?: number) {
+  if (!days || days < 1) return 'Not specified'
+  if (days === 7) return '7 Days'
+  if (days === 30) return '30 Days'
+  if (days === 90) return '90 Days'
+  if (days === 365) return '1 Year'
+  return days >= 365 && days % 365 === 0
+    ? `${days / 365} Year${days / 365 === 1 ? '' : 's'}`
+    : `${days} Days`
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
+}
+
+function formatRemaining(value?: string) {
+  if (!value) return '—'
+  const ms = new Date(value).getTime() - Date.now()
+  if (!Number.isFinite(ms) || ms <= 0) return 'Expired'
+  const days = Math.floor(ms / 86_400_000)
+  const hours = Math.floor((ms % 86_400_000) / 3_600_000)
+  const minutes = Math.floor((ms % 3_600_000) / 60_000)
+  return days > 0 ? `${days}d ${hours}h remaining` : hours > 0 ? `${hours}h ${minutes}m remaining` : `${minutes}m remaining`
+}
+
 function normalizeAccess(
   value?: string | null,
 ) {
@@ -121,9 +148,16 @@ export function SubscriptionsModule() {
     useState<Plan[]>([])
 
   const [methods, setMethods] =
-    useState<PaymentMethod[]>(
-      [],
-    )
+    useState<PaymentMethod[]>([])
+
+  const [currentSubscription, setCurrentSubscription] =
+    useState<{
+      id?: string
+      status?: string
+      startsAt?: string
+      expiresAt?: string
+      plan?: Plan
+    } | null>(null)
 
   const [selected, setSelected] =
     useState<Plan | null>(null)
@@ -200,10 +234,14 @@ export function SubscriptionsModule() {
       const [
         plansResponse,
         methodsResponse,
+        subscriptionResponse,
       ] = await Promise.all([
         api.plans(),
         api.paymentMethods(),
+        api.subscription(),
       ])
+
+      setCurrentSubscription(subscriptionResponse?.data?.subscription ?? null)
 
       const receivedPlans =
         Array.isArray(
@@ -374,6 +412,24 @@ export function SubscriptionsModule() {
           </span>
         </div>
       </header>
+
+      {currentSubscription && (
+        <section className="current-subscription-card" aria-label="Current plan details">
+          <div className="current-subscription-heading">
+            <div>
+              <span className="subscriptions-eyebrow">YOUR ACTIVE PLAN</span>
+              <h2>{currentSubscription.plan?.name || 'Active subscription'}</h2>
+            </div>
+            <span className="current-subscription-status">{currentSubscription.status || 'Active'}</span>
+          </div>
+          <div className="current-subscription-grid">
+            <div><span>Duration</span><strong>{formatPlanDuration(currentSubscription.plan?.durationDays)}</strong></div>
+            <div><span>Start date</span><strong>{formatDateTime(currentSubscription.startsAt)}</strong></div>
+            <div><span>Expiry date</span><strong>{formatDateTime(currentSubscription.expiresAt)}</strong></div>
+            <div><span>Time remaining</span><strong>{formatRemaining(currentSubscription.expiresAt)}</strong></div>
+          </div>
+        </section>
+      )}
 
       {/* =================================================
           INFO STRIP
@@ -603,7 +659,7 @@ export function SubscriptionsModule() {
 
                           <div className="subscription-plan-duration">
                             {plan.durationDays
-                              ? `${plan.durationDays} days`
+                              ? ` ${formatPlanDuration(plan.durationDays)}`
                               : 'Flexible duration'}
                           </div>
 

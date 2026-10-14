@@ -119,9 +119,13 @@ function GroupImage({
         <img
           src={src}
           alt=""
+          loading="eager"
+          decoding="async"
           onError={(event) => {
-            event.currentTarget.style.display =
-              'none'
+            event.currentTarget.remove()
+            if (event.currentTarget.parentElement) {
+              event.currentTarget.parentElement.textContent = initials(group.name)
+            }
           }}
         />
       ) : (
@@ -312,7 +316,7 @@ function GroupDetail({
       setMemberMessage(
         error instanceof Error
           ? error.message
-          : 'Only active paid FULL users can be added.',
+          : 'Could not add this user. Check that you own this group and the user is not already a member.',
       )
     } finally {
       setAdding(null)
@@ -820,8 +824,7 @@ function GroupDetail({
             1
               ? ''
               : 's'}
-            . Only active paid FULL
-            users can be added.
+            . Only the group owner can add users.
           </span>
         </div>
 
