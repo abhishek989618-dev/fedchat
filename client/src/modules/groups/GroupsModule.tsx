@@ -824,8 +824,7 @@ function GroupDetail({
             1
               ? ''
               : 's'}
-            . Only active paid FULL
-            users can be added.
+            . Only the group owner can add users.
           </span>
         </div>
 
