@@ -122,8 +122,10 @@ function GroupImage({
           loading="eager"
           decoding="async"
           onError={(event) => {
-            event.currentTarget.style.display =
-              'none'
+            event.currentTarget.remove()
+            if (event.currentTarget.parentElement) {
+              event.currentTarget.parentElement.textContent = initials(group.name)
+            }
           }}
         />
       ) : (
