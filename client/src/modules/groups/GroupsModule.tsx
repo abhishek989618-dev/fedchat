@@ -119,6 +119,8 @@ function GroupImage({
         <img
           src={src}
           alt=""
+          loading="eager"
+          decoding="async"
           onError={(event) => {
             event.currentTarget.style.display =
               'none'
@@ -312,7 +314,7 @@ function GroupDetail({
       setMemberMessage(
         error instanceof Error
           ? error.message
-          : 'Only active paid FULL users can be added.',
+          : 'Could not add this user. Check that you own this group and the user is not already a member.',
       )
     } finally {
       setAdding(null)
