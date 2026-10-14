@@ -529,8 +529,13 @@ export function ChatModule({
   const [items, setItems] =
     useState<Chat[]>([])
 
-  const [selected, setSelected] =
-    useState('')
+  const [selected, setSelected] = useState(() => {
+    try {
+      return window.sessionStorage.getItem('fedchat:selected-room') || ''
+    } catch {
+      return ''
+    }
+  })
 
   const [showNewChat, setShowNewChat] =
     useState(false)
@@ -730,7 +735,8 @@ useEffect(() => {
             return current
           }
 
-          return rooms[0]?.id ?? ''
+          // Do not automatically open the first conversation after refresh.
+          return ''
         },
       )
     } catch (reason) {
@@ -750,6 +756,18 @@ useEffect(() => {
   useEffect(() => {
     void loadRooms()
   }, [initialRoomId])
+
+  useEffect(() => {
+    try {
+      if (selected) {
+        window.sessionStorage.setItem('fedchat:selected-room', selected)
+      } else {
+        window.sessionStorage.removeItem('fedchat:selected-room')
+      }
+    } catch {
+      // Storage can be disabled; chat selection remains usable in memory.
+    }
+  }, [selected])
 
   /*
    * -------------------------------------------------------
