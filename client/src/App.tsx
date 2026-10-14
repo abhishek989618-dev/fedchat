@@ -128,11 +128,32 @@ function App() {
   const [session, setSession] =
     useState(getSession())
 
-  const [active, setActive] =
-    useState<Section>('chats')
+  const [active, setActive] = useState<Section>(() => {
+    const validSections: Section[] = [
+      'chats', 'contacts', 'status', 'groups', 'communities',
+      'notifications', 'subscriptions', 'settings', 'support', 'admin',
+    ]
+    try {
+      const saved = window.localStorage.getItem('fedchat:active-section')
+      return saved && validSections.includes(saved as Section)
+        ? (saved as Section)
+        : 'chats'
+    } catch {
+      return 'chats'
+    }
+  })
 
   const [adminSection, setAdminSection] =
     useState<AdminSection>('overview')
+
+  // Preserve the current workspace section across refreshes.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('fedchat:active-section', active)
+    } catch {
+      // Storage can be disabled in private browsing; navigation still works.
+    }
+  }, [active])
 
   const [socket, setSocket] =
     useState<Socket | null>(null)
@@ -398,6 +419,12 @@ const [showAuth, setShowAuth] =
     clearSession()
     setSession(null)
     setActive('chats')
+    try {
+      window.localStorage.removeItem('fedchat:active-section')
+      window.sessionStorage.removeItem('fedchat:selected-room')
+    } catch {
+      // Ignore unavailable browser storage during logout.
+    }
     setRequestedRoomId('')
     setRequestedGroupId('')
   }}
